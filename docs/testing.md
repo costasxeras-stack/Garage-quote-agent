@@ -33,13 +33,18 @@
 
 Setup (00) was also run twice to confirm it does not duplicate settings or prices.
 
+## First live check on n8n Cloud (15 November 2026)
+One routine request ("front brake pads, Toyota Yaris 2015") was sent through workflow 01 with the real Claude model. Claude extracted the car, year, engine and the `brake_pads_front` job with confidence 0.9; the rules priced it and routed it to an automatic reply. This is a single example, not an evaluation.
+
 ## Not yet tested
-- Real Claude responses to real customer messages (extraction quality, confidence calibration)
+- Claude on a representative set of real customer messages (extraction quality, confidence calibration)
 - Real Meta WhatsApp Cloud API delivery, and the trigger's webhook registration with Meta
 - Real Telegram and SMTP delivery
 - n8n Cloud specifics (the editor, credentials screens and the published form URLs)
 - Load: many messages arriving at once
 
 ## Known behaviour to watch
+- If sending the reply fails (for example a wrong email setting), the lead is still marked `quoted`. Planned fix: mark it `send_failed` so it shows in the weekly report.
+- The weekly report's median reply time now ignores leads that never got a reply (fixed before release).
 - If Claude is down, the AI node retries for about 2 minutes before the lead goes to the owner.
 - If Telegram is down, owner questions fail and the error alert (also on Telegram) can fail too.
