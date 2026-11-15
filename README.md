@@ -1,6 +1,6 @@
 # Garage Quote Agent
 
-**An n8n automation that answers car-repair price requests in seconds: AI reads the message, the garage's own price book sets the price, and the owner approves anything unclear from Telegram.**
+**An n8n automation that answers car-repair price requests in seconds: AI reads the message, the garage's own price book sets the price, and the owner approves anything unclear from their own WhatsApp.**
 
 Built for independent repair garages in Greece. WhatsApp is the first customer channel; there is also a web form and a generic webhook.
 
@@ -16,10 +16,10 @@ The question I wanted to answer: **how much of the first reply can be automated 
 
 | Workflow | What it does |
 |---|---|
-| **01 · Lead intake and instant quote** | Takes a request from WhatsApp, the web form or a webhook. AI extracts the car, the jobs, safety risks and its own confidence. Rules price the jobs from the price book. Routine requests get an estimate and a booking link automatically. Everything else goes to the owner on Telegram, who can send the estimate, set their own price, say they will call, or decline. No answer in 30 minutes → the customer gets a holding message and the owner a reminder. |
-| **02 · Booking requests** | A booking form linked from every estimate. A one-time token in the link means only real, open estimates can be booked. The owner is told on Telegram. |
+| **01 · Lead intake and instant quote** | Takes a request from WhatsApp, the web form or a webhook. AI extracts the car, the jobs, safety risks and its own confidence. Rules price the jobs from the price book. Routine requests get an estimate and a booking link automatically. Everything else goes to the owner on WhatsApp, who can send the estimate, set their own price, say they will call, or decline. No answer in 30 minutes → the customer gets a holding message and the owner a reminder. |
+| **02 · Booking requests** | A booking form linked from every estimate. A one-time token in the link means only real, open estimates can be booked. The owner is told on WhatsApp. |
 | **03 · Follow-ups** | Hourly. Reminds customers who did not book: one reminder on WhatsApp (inside Meta's 24-hour window), up to two by email (only with consent). Then marks the lead lost. |
-| **04 · Weekly owner report** | Monday 08:00 on Telegram: leads by channel, share answered automatically, median time to first reply, bookings, lost leads, and requests missing from the price book. |
+| **04 · Weekly owner report** | Monday 08:00 on WhatsApp: leads by channel, share answered automatically, median time to first reply, bookings, lost leads, and requests missing from the price book. |
 | **99 · Error alerts** | If any workflow fails, the owner gets the failed step and a link to the run. |
 | **00 · Setup** | Run once. Creates the data tables with sample settings and a sample price book. |
 
@@ -34,7 +34,7 @@ flowchart LR
   AI --> P[Rules price the jobs<br/>from the price book]
   P --> G{Confidence gate}
   G -- all checks pass --> R[Send estimate<br/>WhatsApp or email]
-  G -- any check fails --> O[Owner decides<br/>on Telegram]
+  G -- any check fails --> O[Owner decides<br/>on WhatsApp]
   O -- send / own price / call / decline --> R
   O -- no answer in 30 min --> H[Holding message +<br/>owner reminder]
   R --> D[(Data tables:<br/>leads, events)]
@@ -47,7 +47,7 @@ flowchart LR
 - **n8n** runs everything: triggers, forms, human-in-the-loop, schedules and error handling.
 - **Claude (Anthropic)** only reads and structures the customer's message. It never sets a price.
 - **n8n Data Tables** hold settings, the price book, leads and an event log, all editable without opening a workflow.
-- **Telegram** is the owner's console. **WhatsApp Cloud API** and **email (SMTP)** reach customers.
+- **WhatsApp Cloud API** reaches customers and is the owner's console too. **Email (SMTP)** reaches web-form customers.
 
 ### The confidence gate
 
@@ -79,8 +79,9 @@ I designed the product: the problem, scope, rules, channels and trade-offs in th
 
 - **Sample data.** The garage ("Demo Garage"), its settings and every price in the price book are illustrative sample values, not market prices.
 - **No pilot results yet.** The case study lists hypotheses with [placeholders] until a real garage runs it.
-- **Tested against stand-ins.** v0.1.0 was tested end to end in a local n8n (2.47.7) with stand-ins for Claude, Telegram, WhatsApp and email. See [testing](docs/testing.md). The first live run on n8n Cloud may need small fixes.
+- **Tested against stand-ins.** v0.1.0 was tested end to end in a local n8n (2.47.7) with stand-ins for Claude, WhatsApp and email. See [testing](docs/testing.md). The first live run on n8n Cloud may need small fixes.
 - **Text only.** WhatsApp photos and voice notes are ignored in v0.1.
 - **English replies.** The AI understands Greek and Greeklish, but replies are in English.
 - **WhatsApp follow-ups stop at 24 hours**, because later messages need Meta-approved templates.
+- **Owner alerts need an open WhatsApp window.** The owner must message the garage number at least once every 24 hours (a daily "hi"), or Meta blocks the alerts. Templates are the planned fix ([decision 0007](docs/decisions/0007-owner-decisions-on-whatsapp.md)).
 - **The booking form requests a time.** It does not check the garage calendar; the owner confirms.

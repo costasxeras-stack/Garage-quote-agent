@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 99 · Error alerts\nIf any Garage Quote Agent workflow fails, the owner gets a Telegram alert with the workflow, the failed step and a link to the run.\n\nIn each workflow: **⋯ → Settings → Error workflow → Garage Quote Agent · 99 Error alerts**.",
+        "content": "## 99 · Error alerts\nIf any Garage Quote Agent workflow fails, the owner gets a WhatsApp alert with the workflow, the failed step and a link to the run.\n\nIn each workflow: **⋯ → Settings → Error workflow → Garage Quote Agent · 99 Error alerts**.",
         "width": 420,
         "height": 190,
         "color": 4
@@ -54,17 +54,16 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $('Load settings').first().json.owner_chat_id }}",
-        "text": "={{ String('Automation problem in \"' + $('When a workflow fails').first().json.workflow.name + '\"\\nStep: ' + ($('When a workflow fails').first().json.execution?.lastNodeExecuted || '?') + '\\nError: ' + ($('When a workflow fails').first().json.execution?.error?.message || '?') + '\\n' + ($('When a workflow fails').first().json.execution?.url || '')).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
-        "additionalFields": {
-          "appendAttribution": false,
-          "parse_mode": "HTML"
-        }
+        "operation": "send",
+        "phoneNumberId": "={{ $('Load settings').first().json.whatsapp_phone_number_id }}",
+        "recipientPhoneNumber": "={{ String($('Load settings').first().json.owner_whatsapp_number).replace(/\\D/g, '') }}",
+        "textBody": "={{ String('Automation problem in \"' + $('When a workflow fails').first().json.workflow.name + '\"\\nStep: ' + ($('When a workflow fails').first().json.execution?.lastNodeExecuted || '?') + '\\nError: ' + ($('When a workflow fails').first().json.execution?.error?.message || '?') + '\\n' + ($('When a workflow fails').first().json.execution?.url || '')) }}",
+        "additionalFields": {}
       },
       "id": "eb43fe6c-2909-b005-d77e-de30aebe7d6b",
       "name": "Alert owner",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
       "position": [
         440,
         0

@@ -29,7 +29,7 @@ Independent car-repair garages get price questions on WhatsApp, by phone and on 
 - Channels in: WhatsApp (text), web form, generic webhook
 - AI extraction of car, jobs, safety, confidence (English, Greek, Greeklish)
 - Rule-based price ranges from an editable price book
-- Confidence gate with owner approval on Telegram, with a 30-minute fallback
+- Confidence gate with owner approval on the owner's WhatsApp, with a 30-minute fallback
 - Booking request form with token-protected links
 - Follow-ups within channel rules (WhatsApp 24-hour window, email with consent)
 - Weekly owner report and error alerts

@@ -64,7 +64,7 @@
               "type": "number"
             },
             {
-              "name": "owner_chat_id",
+              "name": "owner_whatsapp_number",
               "type": "string"
             },
             {
@@ -362,7 +362,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Starting values, saved only if the settings table is still empty.\n// Edit them later in the garage_settings data table, not here.\nif ($input.first().json.garage_name) return [];\nreturn [{ json: {\n  garage_name: 'Demo Garage',\n  garage_phone: '[your phone number]',\n  labour_rate_eur: 40,\n  vat_rate: 24,\n  confidence_threshold: 0.75,\n  premium_brands: 'BMW,Mercedes,Audi,Porsche,Lexus,Volvo,Land Rover,Jaguar,Mini',\n  premium_multiplier: 1.25,\n  owner_chat_id: '[your Telegram chat id]',\n  from_email: '[the email address quotes are sent from]',\n  booking_form_url: '[paste the Production URL of the Booking form]',\n  whatsapp_phone_number_id: '[your WhatsApp phone number ID]',\n  followup_hours: 20,\n  final_followup_days: 3,\n} }];"
+        "jsCode": "// Starting values, saved only if the settings table is still empty.\n// Edit them later in the garage_settings data table, not here.\nif ($input.first().json.garage_name) return [];\nreturn [{ json: {\n  garage_name: 'Demo Garage',\n  garage_phone: '[your phone number]',\n  labour_rate_eur: 40,\n  vat_rate: 24,\n  confidence_threshold: 0.75,\n  premium_brands: 'BMW,Mercedes,Audi,Porsche,Lexus,Volvo,Land Rover,Jaguar,Mini',\n  premium_multiplier: 1.25,\n  owner_whatsapp_number: '[owner mobile in international format, e.g. +30...]',\n  from_email: '[the email address quotes are sent from]',\n  booking_form_url: '[paste the Production URL of the Booking form]',\n  whatsapp_phone_number_id: '[your WhatsApp phone number ID]',\n  followup_hours: 20,\n  final_followup_days: 3,\n} }];"
       },
       "id": "6cc1b9d1-8e52-fd77-dac0-e2a0d1a278fd",
       "name": "Default settings (if none yet)",

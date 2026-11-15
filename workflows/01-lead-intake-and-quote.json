@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 01 · Lead intake and instant quote\nA customer asks for a price on **WhatsApp**, the **web form**, or any tool that can call the **webhook**.\n\n1. AI reads the message: car, jobs, safety, confidence.\n2. **Rules, not AI, set the price** from the garage price book.\n3. Clear, routine requests get an estimate within seconds.\n4. Anything unclear goes to the owner on **Telegram** for a decision.\n5. Every lead, decision and reply is saved in the data tables.",
+        "content": "## 01 · Lead intake and instant quote\nA customer asks for a price on **WhatsApp**, the **web form**, or any tool that can call the **webhook**.\n\n1. AI reads the message: car, jobs, safety, confidence.\n2. **Rules, not AI, set the price** from the garage price book.\n3. Clear, routine requests get an estimate within seconds.\n4. Anything unclear goes to the owner's own **WhatsApp** for a decision.\n5. Every lead, decision and reply is saved in the data tables.",
         "width": 460,
         "height": 300,
         "color": 4
@@ -35,7 +35,7 @@
     },
     {
       "parameters": {
-        "content": "### Owner decision\nThe owner gets a Telegram message with a button. The form lets them:\n- send the calculated estimate\n- send their own price\n- say they will call\n- decline\n\nNo answer within 30 minutes → the customer gets a holding message and the owner gets a reminder.",
+        "content": "### Owner decision\nThe owner gets a WhatsApp message with a link. The form lets them:\n- send the calculated estimate\n- send their own price\n- say they will call\n- decline\n\nNo answer within 30 minutes → the customer gets a holding message and the owner gets a reminder.\n\n⚠ WhatsApp only delivers these if the owner has messaged the garage number in the last 24 hours (Meta rule).",
         "width": 380,
         "height": 250,
         "color": 3
@@ -218,7 +218,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Gives the AI the customer's words plus the garage's list of priced jobs.\nconst jobs = $('Load price book').all().map(i => i.json).filter(r => r.job_code);\nconst jobList = jobs.map(r => '- ' + r.job_code + ': ' + r.name + (r.keywords ? ' (also: ' + r.keywords + ')' : '')).join('\\n');\n\nreturn $('Normalise lead').all().map(item => ({\n  json: {\n    ...item.json,\n    ai_text: 'PRICE LIST JOB CODES:\\n' + jobList +\n      '\\n\\nCAR (as typed by the customer, may be empty): ' + (item.json.car_text || '-') +\n      '\\n\\nCUSTOMER MESSAGE:\\n' + item.json.request_text,\n  },\n}));"
+        "jsCode": "// Gives the AI the customer's words plus the garage's list of priced jobs.\n// Messages from the owner's own number (e.g. the daily \"hi\" that keeps WhatsApp's 24-hour window open) are not leads.\nconst digits = (v) => String(v || '').replace(/\\D/g, '');\nconst owner = digits($('Load settings').first().json.owner_whatsapp_number);\nconst jobs = $('Load price book').all().map(i => i.json).filter(r => r.job_code);\nconst jobList = jobs.map(r => '- ' + r.job_code + ': ' + r.name + (r.keywords ? ' (also: ' + r.keywords + ')' : '')).join('\\n');\n\nreturn $('Normalise lead').all().filter(item => !(owner && item.json.channel === 'whatsapp' && digits(item.json.customer_phone) === owner)).map(item => ({\n  json: {\n    ...item.json,\n    ai_text: 'PRICE LIST JOB CODES:\\n' + jobList +\n      '\\n\\nCAR (as typed by the customer, may be empty): ' + (item.json.car_text || '-') +\n      '\\n\\nCUSTOMER MESSAGE:\\n' + item.json.request_text,\n  },\n}));"
       },
       "id": "ec01dcc8-8c0f-feae-a0eb-7727dac0eeeb",
       "name": "Build AI request",
@@ -745,8 +745,9 @@
     {
       "parameters": {
         "operation": "sendAndWait",
-        "chatId": "={{ $('Load settings').first().json.owner_chat_id }}",
-        "message": "={{ (() => {\nconst j = $('Price & route').item.json;\n// Telegram reads this message as Markdown, so strip characters that would break it.\nconst t = (v) => String(v ?? '').replace(/[_*\\x60\\[\\]]/g, ' ');\nreturn [\n  'New quote request needs your decision',\n  '',\n  'Customer: ' + t(j.customer_name || 'unknown') + ' (' + t(j.channel) + ')',\n  'Contact: ' + t([j.customer_phone, j.customer_email].filter(Boolean).join(' / ')),\n  'Car: ' + t([j.car_make, j.car_model, j.car_year || ''].filter(Boolean).join(' ') || 'not stated'),\n  '',\n  'They wrote: \"' + t(j.request_text) + '\"',\n  '',\n  'Why it was not sent automatically:',\n  ...String(j.review_reasons).split(' | ').map(r => '- ' + t(r)),\n  '',\n  'Calculated estimate: ' + (j.quote_high ? '€' + j.quote_low + ' – €' + j.quote_high : 'none'),\n  t(j.quote_lines || ''),\n  '',\n  'Lead ' + t(j.lead_id),\n].join('\\n');\n})() }}",
+        "phoneNumberId": "={{ $('Load settings').first().json.whatsapp_phone_number_id }}",
+        "recipientPhoneNumber": "={{ String($('Load settings').first().json.owner_whatsapp_number).replace(/\\D/g, '') }}",
+        "message": "={{ (() => {\nconst j = $('Price & route').item.json;\n// WhatsApp treats * _ ~ and backticks as formatting, so strip them from customer text.\nconst t = (v) => String(v ?? '').replace(/[_*~\\x60]/g, ' ');\nreturn [\n  'New quote request needs your decision',\n  '',\n  'Customer: ' + t(j.customer_name || 'unknown') + ' (' + t(j.channel) + ')',\n  'Contact: ' + t([j.customer_phone, j.customer_email].filter(Boolean).join(' / ')),\n  'Car: ' + t([j.car_make, j.car_model, j.car_year || ''].filter(Boolean).join(' ') || 'not stated'),\n  '',\n  'They wrote: \"' + t(j.request_text) + '\"',\n  '',\n  'Why it was not sent automatically:',\n  ...String(j.review_reasons).split(' | ').map(r => '- ' + t(r)),\n  '',\n  'Calculated estimate: ' + (j.quote_high ? '€' + j.quote_low + ' – €' + j.quote_high : 'none'),\n  t(j.quote_lines || ''),\n  '',\n  'Lead ' + t(j.lead_id),\n].join('\\n');\n})() }}",
         "responseType": "customForm",
         "defineForm": "json",
         "jsonOutput": "=[\n  {\n    \"fieldLabel\": \"Decision\",\n    \"fieldType\": \"dropdown\",\n    \"fieldOptions\": {\n      \"values\": [\n        {\n          \"option\": \"Send estimate as calculated\"\n        },\n        {\n          \"option\": \"Send estimate with my price\"\n        },\n        {\n          \"option\": \"I will call the customer\"\n        },\n        {\n          \"option\": \"Decline the job\"\n        }\n      ]\n    },\n    \"requiredField\": true\n  },\n  {\n    \"fieldLabel\": \"Your price from (€ incl. VAT)\",\n    \"fieldType\": \"number\"\n  },\n  {\n    \"fieldLabel\": \"Your price to (€ incl. VAT)\",\n    \"fieldType\": \"number\"\n  },\n  {\n    \"fieldLabel\": \"Note to the customer\",\n    \"fieldType\": \"textarea\"\n  }\n]",
@@ -764,10 +765,10 @@
           }
         }
       },
-      "id": "a17d6416-231f-ec7e-0d9f-70d759f97acc",
-      "name": "Ask owner on Telegram",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
+      "id": "d821169e-fe1b-97e0-bd28-27f77e222f60",
+      "name": "Ask owner on WhatsApp",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
       "position": [
         1500,
         160
@@ -1365,17 +1366,16 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $('Load settings').first().json.owner_chat_id }}",
-        "text": "={{ String($('Prepare reply').item.json.owner_fyi).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
-        "additionalFields": {
-          "appendAttribution": false,
-          "parse_mode": "HTML"
-        }
+        "operation": "send",
+        "phoneNumberId": "={{ $('Load settings').first().json.whatsapp_phone_number_id }}",
+        "recipientPhoneNumber": "={{ String($('Load settings').first().json.owner_whatsapp_number).replace(/\\D/g, '') }}",
+        "textBody": "={{ String($('Prepare reply').item.json.owner_fyi) }}",
+        "additionalFields": {}
       },
-      "id": "0efe05e5-c605-5821-2b0e-7c38c79c7436",
-      "name": "Owner update on Telegram",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
+      "id": "6afeed7d-5e6a-83c1-3af3-be1f3058b43d",
+      "name": "Owner update on WhatsApp",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
       "position": [
         3120,
         -20
@@ -1521,14 +1521,14 @@
         ],
         [
           {
-            "node": "Ask owner on Telegram",
+            "node": "Ask owner on WhatsApp",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Ask owner on Telegram": {
+    "Ask owner on WhatsApp": {
       "main": [
         [
           {
@@ -1628,7 +1628,7 @@
       "main": [
         [
           {
-            "node": "Owner update on Telegram",
+            "node": "Owner update on WhatsApp",
             "type": "main",
             "index": 0
           }

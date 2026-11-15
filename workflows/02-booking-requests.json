@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 02 · Booking requests\nEvery estimate links to this form. The link carries the lead ID and a one-time token, so a booking is only accepted for a real, open estimate.\n\nThe owner gets the booking request on Telegram and confirms the time with the customer.\n\nCopy this form's **Production URL** into `booking_form_url` in the **garage_settings** table.",
+        "content": "## 02 · Booking requests\nEvery estimate links to this form. The link carries the lead ID and a one-time token, so a booking is only accepted for a real, open estimate.\n\nThe owner gets the booking request on WhatsApp and confirms the time with the customer.\n\nCopy this form's **Production URL** into `booking_form_url` in the **garage_settings** table.",
         "width": 440,
         "height": 240,
         "color": 4
@@ -543,17 +543,16 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $('Load settings').first().json.owner_chat_id }}",
-        "text": "={{ String('New booking request\\n\\n' + $('Check link').item.json.customer_name + ' – ' + $('Check link').item.json.car + '\\nWants: ' + $('Check link').item.json.booking_pref + '\\nEstimate: ' + $('Check link').item.json.estimate + '\\nContact: ' + [$('Check link').item.json.customer_phone, $('Check link').item.json.customer_email].filter(Boolean).join(' / ') + '\\n\\nPlease confirm the time with the customer. (lead ' + $('Check link').item.json.lead_id + ')').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
-        "additionalFields": {
-          "appendAttribution": false,
-          "parse_mode": "HTML"
-        }
+        "operation": "send",
+        "phoneNumberId": "={{ $('Load settings').first().json.whatsapp_phone_number_id }}",
+        "recipientPhoneNumber": "={{ String($('Load settings').first().json.owner_whatsapp_number).replace(/\\D/g, '') }}",
+        "textBody": "={{ String('New booking request\\n\\n' + $('Check link').item.json.customer_name + ' – ' + $('Check link').item.json.car + '\\nWants: ' + $('Check link').item.json.booking_pref + '\\nEstimate: ' + $('Check link').item.json.estimate + '\\nContact: ' + [$('Check link').item.json.customer_phone, $('Check link').item.json.customer_email].filter(Boolean).join(' / ') + '\\n\\nPlease confirm the time with the customer. (lead ' + $('Check link').item.json.lead_id + ')') }}",
+        "additionalFields": {}
       },
       "id": "34abdb85-a33a-126f-d006-1460da4eae87",
       "name": "Tell owner",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
       "position": [
         1320,
         -100
