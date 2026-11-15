@@ -1,0 +1,754 @@
+{
+  "name": "Garage Quote Agent · 03 Follow-ups",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 03 · Follow-ups\nEvery hour: finds estimates that were not booked and are due a reminder.\n- **WhatsApp:** one reminder, inside the 24-hour window that opens when the customer writes. Later messages would need Meta-approved templates (planned).\n- **Email:** up to two reminders, only if the customer ticked consent.\n\nAfter the last reminder the lead is marked **lost_no_reply**, so the weekly report shows real drop-off.",
+        "width": 460,
+        "height": 260,
+        "color": 4
+      },
+      "id": "d19d2858-c19a-7847-96fd-6db6a9b2e30a",
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "03307a7d-2656-d850-953b-55640ef17dd2",
+      "name": "Every hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_settings"
+        },
+        "matchType": "allConditions",
+        "filters": {},
+        "limit": 1
+      },
+      "id": "b1db480b-991c-dc33-77ae-c7b4e2454f9b",
+      "name": "Load settings",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        0
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_leads"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "quoted"
+            },
+            {
+              "keyName": "next_followup_at",
+              "condition": "lte",
+              "keyValue": "={{ $now.toISO() }}"
+            }
+          ]
+        },
+        "returnAll": true
+      },
+      "id": "5b6a9f89-3734-81d0-fb01-4b673b9259ae",
+      "name": "Leads due a follow-up",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        0
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Picks the right follow-up for each lead that is due one.\nconst s = $('Load settings').first().json;\nconst out = [];\nfor (const item of $input.all()) {\n  const j = item.json;\n  if (!j.lead_id) continue;\n  const via = j.channel === 'whatsapp' ? 'whatsapp' : (j.customer_email ? 'email' : 'none');\n  const stage = Number(j.followup_stage) || 0;\n  const first = (j.customer_name || '').split(' ')[0];\n  const hi = 'Hi' + (first ? ' ' + first : '') + ',';\n  const car = [j.car_make, j.car_model].filter(Boolean).join(' ');\n  const maxStage = via === 'whatsapp' ? 1 : 2; // after 24h WhatsApp needs approved templates (not in v0.1)\n\n  if (stage >= maxStage || via === 'none') {\n    out.push({ json: { ...j, reply_via: 'none', reply_text: '', new_status: 'lost_no_reply', new_stage: stage, next_followup_at: null } });\n  } else if (stage === 0) {\n    out.push({ json: { ...j, reply_via: via, new_status: 'quoted', new_stage: 1,\n      reply_subject: 'Shall we book your ' + (car || 'car') + ' in?',\n      reply_text: [hi, '', 'Just checking: would you like to book a time for your ' + (car || 'car') + '? Your estimate was €' + j.quote_low + ' – €' + j.quote_high + '.', '', 'Book here: ' + s.booking_form_url + '?lead_id=' + j.lead_id + '&token=' + j.token, 'Or reply with any questions.', '', s.garage_name].join('\\n'),\n      next_followup_at: via === 'email' ? new Date(Date.now() + (Number(s.final_followup_days) || 3) * 86400e3).toISOString() : new Date(Date.now() + 3600e3).toISOString() } });\n  } else {\n    out.push({ json: { ...j, reply_via: via, new_status: 'quoted', new_stage: 2,\n      reply_subject: 'Your estimate from ' + s.garage_name,\n      reply_text: [hi, '', 'Your estimate for the ' + (car || 'car') + ' is still valid. If you would like to book or have questions, just reply or call us on ' + s.garage_phone + '. We will not send more reminders about this request.', '', s.garage_name].join('\\n'),\n      next_followup_at: new Date(Date.now() + 86400e3).toISOString() } });\n  }\n}\nreturn out;"
+      },
+      "id": "14bc106f-7b49-5be7-edb0-683756e5e23a",
+      "name": "Choose follow-up",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "11932a3a-9081-5419-b918-44bb15cc42e0",
+                    "leftValue": "={{ $json.reply_via }}",
+                    "rightValue": "whatsapp",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "WhatsApp"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "edbb3d15-81bf-dc88-331b-01d28e2600a9",
+                    "leftValue": "={{ $json.reply_via }}",
+                    "rightValue": "email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Email"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Close lead"
+        }
+      },
+      "id": "1f5445b6-2b74-a212-7b3e-5a2d5839809a",
+      "name": "Channel",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "={{ $('Load settings').first().json.whatsapp_phone_number_id }}",
+        "recipientPhoneNumber": "={{ $json.customer_phone }}",
+        "textBody": "={{ $json.reply_text }}",
+        "additionalFields": {}
+      },
+      "id": "e606e969-76d8-a356-e443-5809769088ad",
+      "name": "Remind on WhatsApp",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $('Load settings').first().json.garage_name }} <{{ $('Load settings').first().json.from_email }}>",
+        "toEmail": "={{ $json.customer_email }}",
+        "subject": "={{ $json.reply_subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.reply_text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "f4245bbb-98bb-eb3d-2b79-67320daae9a0",
+      "name": "Remind by email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1100,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_leads"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "lead_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Choose follow-up').item.json.lead_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "={{ $('Choose follow-up').item.json.new_status }}",
+            "followup_stage": "={{ $('Choose follow-up').item.json.new_stage }}",
+            "next_followup_at": "={{ $('Choose follow-up').item.json.next_followup_at }}",
+            "last_message": "={{ $('Choose follow-up').item.json.reply_text || $('Choose follow-up').item.json.last_message || '' }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "token",
+              "displayName": "token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "date",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "channel",
+              "displayName": "channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "customer_name",
+              "displayName": "customer_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "customer_email",
+              "displayName": "customer_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "customer_phone",
+              "displayName": "customer_phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "followup_consent",
+              "displayName": "followup_consent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "request_text",
+              "displayName": "request_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "language",
+              "displayName": "language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "car_make",
+              "displayName": "car_make",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "car_model",
+              "displayName": "car_model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "car_year",
+              "displayName": "car_year",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "jobs_matched",
+              "displayName": "jobs_matched",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "jobs_unmatched",
+              "displayName": "jobs_unmatched",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_confidence",
+              "displayName": "ai_confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_safety_flag",
+              "displayName": "ai_safety_flag",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_summary",
+              "displayName": "ai_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "route",
+              "displayName": "route",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "review_reasons",
+              "displayName": "review_reasons",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "quote_low",
+              "displayName": "quote_low",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "quote_high",
+              "displayName": "quote_high",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "owner_decision",
+              "displayName": "owner_decision",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "owner_note",
+              "displayName": "owner_note",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "last_message",
+              "displayName": "last_message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "first_reply_at",
+              "displayName": "first_reply_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "date",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "response_minutes",
+              "displayName": "response_minutes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "followup_stage",
+              "displayName": "followup_stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "next_followup_at",
+              "displayName": "next_followup_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "date",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "booking_pref",
+              "displayName": "booking_pref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "70b87e49-226a-293c-53bb-0cbbb1d0a2c2",
+      "name": "Update lead",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1340,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_events"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $('Choose follow-up').item.json.lead_id }}",
+            "event": "={{ $('Choose follow-up').item.json.new_status === 'lost_no_reply' ? 'marked_lost' : 'followup_' + $('Choose follow-up').item.json.new_stage + '_sent' }}",
+            "detail": "={{ $('Choose follow-up').item.json.reply_via }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "event",
+              "displayName": "event",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "detail",
+              "displayName": "detail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "5e7266e0-afe3-cae7-2506-720dc5e24297",
+      "name": "Log follow-up",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1560,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Every hour": {
+      "main": [
+        [
+          {
+            "node": "Load settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load settings": {
+      "main": [
+        [
+          {
+            "node": "Leads due a follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leads due a follow-up": {
+      "main": [
+        [
+          {
+            "node": "Choose follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Choose follow-up": {
+      "main": [
+        [
+          {
+            "node": "Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Channel": {
+      "main": [
+        [
+          {
+            "node": "Remind on WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Remind by email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remind on WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Update lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remind by email": {
+      "main": [
+        [
+          {
+            "node": "Update lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update lead": {
+      "main": [
+        [
+          {
+            "node": "Log follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Athens",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

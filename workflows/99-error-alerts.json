@@ -1,0 +1,110 @@
+{
+  "name": "Garage Quote Agent · 99 Error alerts",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 99 · Error alerts\nIf any Garage Quote Agent workflow fails, the owner gets a Telegram alert with the workflow, the failed step and a link to the run.\n\nIn each workflow: **⋯ → Settings → Error workflow → Garage Quote Agent · 99 Error alerts**.",
+        "width": 420,
+        "height": 190,
+        "color": 4
+      },
+      "id": "4cdc286d-b68a-d71d-ef8d-7685eefcc99a",
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -280
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "e7a2eda7-bad9-5083-c169-a447006d4d84",
+      "name": "When a workflow fails",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_settings"
+        },
+        "matchType": "allConditions",
+        "filters": {},
+        "limit": 1
+      },
+      "id": "18dd32b4-b414-ef3b-fafb-2f429ff652f7",
+      "name": "Load settings",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        0
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Load settings').first().json.owner_chat_id }}",
+        "text": "={{ String('Automation problem in \"' + $('When a workflow fails').first().json.workflow.name + '\"\\nStep: ' + ($('When a workflow fails').first().json.execution?.lastNodeExecuted || '?') + '\\nError: ' + ($('When a workflow fails').first().json.execution?.error?.message || '?') + '\\n' + ($('When a workflow fails').first().json.execution?.url || '')).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "eb43fe6c-2909-b005-d77e-de30aebe7d6b",
+      "name": "Alert owner",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "When a workflow fails": {
+      "main": [
+        [
+          {
+            "node": "Load settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load settings": {
+      "main": [
+        [
+          {
+            "node": "Alert owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Athens",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

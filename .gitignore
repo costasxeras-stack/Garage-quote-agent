@@ -1,0 +1,6 @@
+node_modules/
+.env
+.DS_Store
+# n8n exports with real credentials or customer data never go in this repo
+*-with-credentials.json
+exports/

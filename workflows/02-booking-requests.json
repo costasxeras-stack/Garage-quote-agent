@@ -1,0 +1,714 @@
+{
+  "name": "Garage Quote Agent · 02 Booking requests",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 02 · Booking requests\nEvery estimate links to this form. The link carries the lead ID and a one-time token, so a booking is only accepted for a real, open estimate.\n\nThe owner gets the booking request on Telegram and confirms the time with the customer.\n\nCopy this form's **Production URL** into `booking_form_url` in the **garage_settings** table.",
+        "width": 440,
+        "height": 240,
+        "color": 4
+      },
+      "id": "171c6ea3-9db5-0693-1650-5d7225c6437d",
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -340
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Book your repair",
+        "formDescription": "Choose a day and time that suit you. We will confirm by phone or message.",
+        "formFields": {
+          "values": [
+            {
+              "fieldName": "lead_id",
+              "fieldType": "hiddenField"
+            },
+            {
+              "fieldName": "token",
+              "fieldType": "hiddenField"
+            },
+            {
+              "fieldName": "preferred_date",
+              "fieldLabel": "Preferred day",
+              "fieldType": "date",
+              "requiredField": true
+            },
+            {
+              "fieldName": "preferred_time",
+              "fieldLabel": "Preferred time",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Morning (08:00–12:00)"
+                  },
+                  {
+                    "option": "Midday (12:00–15:00)"
+                  },
+                  {
+                    "option": "Afternoon (15:00–18:00)"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldName": "note",
+              "fieldLabel": "Anything else we should know?",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "responseMode": "onReceived",
+        "options": {
+          "path": "garage-booking",
+          "appendAttribution": false,
+          "buttonLabel": "Request this time",
+          "respondWithOptions": {
+            "values": {
+              "respondWith": "text",
+              "formSubmittedText": "Thank you. We have your request and will confirm the time shortly."
+            }
+          }
+        }
+      },
+      "id": "c2ebeb17-f797-4d77-24ee-c5846f4a39d4",
+      "name": "Booking form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "b1d3c0de-0002-4a00-9000-000000000001"
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_settings"
+        },
+        "matchType": "allConditions",
+        "filters": {},
+        "limit": 1
+      },
+      "id": "39dddbc0-800e-dfff-1063-f32a54e6cbb9",
+      "name": "Load settings",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        0
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_leads"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "lead_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Booking form').first().json.lead_id }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "id": "cda512b3-f233-4613-5fc9-c115aac61722",
+      "name": "Find lead",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        0
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Accepts the booking only if the link's token matches the lead.\nconst form = $('Booking form').first().json;\nconst lead = $input.all().map(i => i.json).find(r => r.lead_id) || null;\nconst ok = !!lead && lead.token === String(form.token || '') && ['quoted', 'needs_call', 'awaiting_owner'].includes(lead.status);\nreturn [{ json: {\n  valid: ok,\n  reason: !lead ? 'lead not found' : (ok ? '' : 'token mismatch or lead closed (' + lead.status + ')'),\n  lead_id: lead?.lead_id || String(form.lead_id || ''),\n  customer_name: lead?.customer_name || '',\n  customer_phone: lead?.customer_phone || '',\n  customer_email: lead?.customer_email || '',\n  car: lead ? [lead.car_make, lead.car_model, lead.car_year || ''].filter(Boolean).join(' ') : '',\n  estimate: lead ? '€' + lead.quote_low + ' – €' + lead.quote_high : '',\n  booking_pref: String(form.preferred_date || '').slice(0, 10) + ', ' + (form.preferred_time || '') + (form.note ? ' – ' + form.note : ''),\n} }];"
+      },
+      "id": "6422c3a0-b57a-571a-e3dd-68a869788618",
+      "name": "Check link",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4beca02f-ddca-461e-53a6-c8012c1476a0",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "81afda7e-4816-ff7a-a7b5-cac4413e6d12",
+      "name": "Valid booking?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_leads"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "lead_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.lead_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "booking_requested",
+            "booking_pref": "={{ $json.booking_pref }}",
+            "next_followup_at": "={{ null }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "token",
+              "displayName": "token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "date",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "channel",
+              "displayName": "channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "customer_name",
+              "displayName": "customer_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "customer_email",
+              "displayName": "customer_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "customer_phone",
+              "displayName": "customer_phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "followup_consent",
+              "displayName": "followup_consent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "request_text",
+              "displayName": "request_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "language",
+              "displayName": "language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "car_make",
+              "displayName": "car_make",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "car_model",
+              "displayName": "car_model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "car_year",
+              "displayName": "car_year",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "jobs_matched",
+              "displayName": "jobs_matched",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "jobs_unmatched",
+              "displayName": "jobs_unmatched",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_confidence",
+              "displayName": "ai_confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_safety_flag",
+              "displayName": "ai_safety_flag",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_summary",
+              "displayName": "ai_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "route",
+              "displayName": "route",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "review_reasons",
+              "displayName": "review_reasons",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "quote_low",
+              "displayName": "quote_low",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "quote_high",
+              "displayName": "quote_high",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "owner_decision",
+              "displayName": "owner_decision",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "owner_note",
+              "displayName": "owner_note",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "last_message",
+              "displayName": "last_message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "first_reply_at",
+              "displayName": "first_reply_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "date",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "response_minutes",
+              "displayName": "response_minutes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "followup_stage",
+              "displayName": "followup_stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "next_followup_at",
+              "displayName": "next_followup_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "date",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "booking_pref",
+              "displayName": "booking_pref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "657c47ea-aeb7-1cf3-0672-599d7239f69b",
+      "name": "Mark booking requested",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Load settings').first().json.owner_chat_id }}",
+        "text": "={{ String('New booking request\\n\\n' + $('Check link').item.json.customer_name + ' – ' + $('Check link').item.json.car + '\\nWants: ' + $('Check link').item.json.booking_pref + '\\nEstimate: ' + $('Check link').item.json.estimate + '\\nContact: ' + [$('Check link').item.json.customer_phone, $('Check link').item.json.customer_email].filter(Boolean).join(' / ') + '\\n\\nPlease confirm the time with the customer. (lead ' + $('Check link').item.json.lead_id + ')').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "34abdb85-a33a-126f-d006-1460da4eae87",
+      "name": "Tell owner",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1320,
+        -100
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_events"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $json.lead_id }}",
+            "event": "booking_rejected",
+            "detail": "={{ $json.reason }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "event",
+              "displayName": "event",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "detail",
+              "displayName": "detail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "d8f999f3-6836-2a1d-ecae-6a753353a41f",
+      "name": "Log rejected booking",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Booking form": {
+      "main": [
+        [
+          {
+            "node": "Load settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load settings": {
+      "main": [
+        [
+          {
+            "node": "Find lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find lead": {
+      "main": [
+        [
+          {
+            "node": "Check link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check link": {
+      "main": [
+        [
+          {
+            "node": "Valid booking?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid booking?": {
+      "main": [
+        [
+          {
+            "node": "Mark booking requested",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log rejected booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark booking requested": {
+      "main": [
+        [
+          {
+            "node": "Tell owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Athens",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
