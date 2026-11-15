@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## 04 · Weekly owner report\nEvery Monday at 08:00 the owner gets the last 7 days on Telegram: leads by channel, share answered automatically, median time to first reply, booking requests, leads lost after follow-ups, and requests that are **not in the price book** (what to add next).",
+        "content": "## 04 · Weekly owner report\nEvery Monday at 08:00 the owner gets the last 7 days on WhatsApp: leads by channel, share answered automatically, median time to first reply, booking requests, leads lost after follow-ups, and requests that are **not in the price book** (what to add next).",
         "width": 440,
         "height": 200,
         "color": 4
@@ -103,17 +103,16 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $('Load settings').first().json.owner_chat_id }}",
-        "text": "={{ String($json.text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
-        "additionalFields": {
-          "appendAttribution": false,
-          "parse_mode": "HTML"
-        }
+        "operation": "send",
+        "phoneNumberId": "={{ $('Load settings').first().json.whatsapp_phone_number_id }}",
+        "recipientPhoneNumber": "={{ String($('Load settings').first().json.owner_whatsapp_number).replace(/\\D/g, '') }}",
+        "textBody": "={{ String($json.text) }}",
+        "additionalFields": {}
       },
       "id": "cb2b1935-1224-5480-d345-7953277fae0f",
       "name": "Send report",
-      "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1.2,
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
       "position": [
         880,
         0

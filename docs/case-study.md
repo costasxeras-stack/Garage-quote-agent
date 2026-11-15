@@ -26,7 +26,7 @@ Source: [pilot garage, anonymised] · Period: [dates]
 
 **1. The gate routes uncertain requests to the owner instead of guessing.** *Confirmed in testing.* Vague messages ("strange noise when I turn"), possible safety issues (smoke) and owner-only jobs (timing belt) all went to the owner with the reasons listed. Routine jobs with a known car were answered automatically. *Why it matters:* the owner only sees the requests that need judgement.
 
-**2. Messaging rules shape the product, not just the integration.** *Confirmed by design.* WhatsApp allows free-form replies only within 24 hours of the customer's last message, so the follow-up is scheduled inside that window, and owner alerts go to Telegram, where business-initiated messages need no approved template.
+**2. Messaging rules shape the product, not just the integration.** *Confirmed by design.* WhatsApp allows free-form replies only within 24 hours of the customer's last message, so the follow-up is scheduled inside that window, and owner alerts go to the owner's WhatsApp, which only works while the owner keeps the 24-hour window open with a daily message.
 
 **3. "Not in the price book" is a demand signal.** *Hypothesis.* The weekly report lists requests that matched no job. I expect these to show which services to price next.
 
