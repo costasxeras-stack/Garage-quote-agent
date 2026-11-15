@@ -1,0 +1,590 @@
+{
+  "name": "Garage Quote Agent · 00 Setup (run once)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Run this once\nCreates the four data tables and fills them with **sample** settings and a **sample** price book.\n\nSafe to run again: existing rows are kept.\n\nAfterwards open **Overview → Data tables** and replace the [bracketed] settings and the sample prices with your own.",
+        "width": 420,
+        "height": 220,
+        "color": 4
+      },
+      "id": "452585bb-fa15-a3eb-1bd2-5eb7e21049ea",
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -260
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "8eb835aa-9ca2-67e5-2684-c2b88eff724a",
+      "name": "Run setup",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "garage_settings",
+        "columns": {
+          "column": [
+            {
+              "name": "garage_name",
+              "type": "string"
+            },
+            {
+              "name": "garage_phone",
+              "type": "string"
+            },
+            {
+              "name": "labour_rate_eur",
+              "type": "number"
+            },
+            {
+              "name": "vat_rate",
+              "type": "number"
+            },
+            {
+              "name": "confidence_threshold",
+              "type": "number"
+            },
+            {
+              "name": "premium_brands",
+              "type": "string"
+            },
+            {
+              "name": "premium_multiplier",
+              "type": "number"
+            },
+            {
+              "name": "owner_chat_id",
+              "type": "string"
+            },
+            {
+              "name": "from_email",
+              "type": "string"
+            },
+            {
+              "name": "booking_form_url",
+              "type": "string"
+            },
+            {
+              "name": "whatsapp_phone_number_id",
+              "type": "string"
+            },
+            {
+              "name": "followup_hours",
+              "type": "number"
+            },
+            {
+              "name": "final_followup_days",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "id": "b4f63a99-7447-e188-c87e-b4bba9260d6a",
+      "name": "Create settings table",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "garage_price_book",
+        "columns": {
+          "column": [
+            {
+              "name": "job_code",
+              "type": "string"
+            },
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "keywords",
+              "type": "string"
+            },
+            {
+              "name": "labour_hours",
+              "type": "number"
+            },
+            {
+              "name": "parts_low_eur",
+              "type": "number"
+            },
+            {
+              "name": "parts_high_eur",
+              "type": "number"
+            },
+            {
+              "name": "auto_quote",
+              "type": "boolean"
+            },
+            {
+              "name": "notes",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "id": "6b2d54c9-3097-3d8f-40ae-7bf76ee4f217",
+      "name": "Create price book table",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "garage_leads",
+        "columns": {
+          "column": [
+            {
+              "name": "lead_id",
+              "type": "string"
+            },
+            {
+              "name": "token",
+              "type": "string"
+            },
+            {
+              "name": "received_at",
+              "type": "date"
+            },
+            {
+              "name": "channel",
+              "type": "string"
+            },
+            {
+              "name": "customer_name",
+              "type": "string"
+            },
+            {
+              "name": "customer_email",
+              "type": "string"
+            },
+            {
+              "name": "customer_phone",
+              "type": "string"
+            },
+            {
+              "name": "followup_consent",
+              "type": "boolean"
+            },
+            {
+              "name": "request_text",
+              "type": "string"
+            },
+            {
+              "name": "language",
+              "type": "string"
+            },
+            {
+              "name": "car_make",
+              "type": "string"
+            },
+            {
+              "name": "car_model",
+              "type": "string"
+            },
+            {
+              "name": "car_year",
+              "type": "number"
+            },
+            {
+              "name": "jobs_matched",
+              "type": "string"
+            },
+            {
+              "name": "jobs_unmatched",
+              "type": "string"
+            },
+            {
+              "name": "ai_confidence",
+              "type": "number"
+            },
+            {
+              "name": "ai_safety_flag",
+              "type": "boolean"
+            },
+            {
+              "name": "ai_summary",
+              "type": "string"
+            },
+            {
+              "name": "route",
+              "type": "string"
+            },
+            {
+              "name": "review_reasons",
+              "type": "string"
+            },
+            {
+              "name": "quote_low",
+              "type": "number"
+            },
+            {
+              "name": "quote_high",
+              "type": "number"
+            },
+            {
+              "name": "status",
+              "type": "string"
+            },
+            {
+              "name": "owner_decision",
+              "type": "string"
+            },
+            {
+              "name": "owner_note",
+              "type": "string"
+            },
+            {
+              "name": "last_message",
+              "type": "string"
+            },
+            {
+              "name": "first_reply_at",
+              "type": "date"
+            },
+            {
+              "name": "response_minutes",
+              "type": "number"
+            },
+            {
+              "name": "followup_stage",
+              "type": "number"
+            },
+            {
+              "name": "next_followup_at",
+              "type": "date"
+            },
+            {
+              "name": "booking_pref",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "id": "3d80ca5b-4932-870c-d6aa-eb45b1e8e564",
+      "name": "Create leads table",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "garage_events",
+        "columns": {
+          "column": [
+            {
+              "name": "lead_id",
+              "type": "string"
+            },
+            {
+              "name": "event",
+              "type": "string"
+            },
+            {
+              "name": "detail",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "id": "f3431b5e-47d1-3ddc-568e-db19ffe73762",
+      "name": "Create events table",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_settings"
+        },
+        "matchType": "allConditions",
+        "filters": {},
+        "limit": 1
+      },
+      "id": "eb8226fd-6b6f-a579-ffcb-793e5cec47b3",
+      "name": "Existing settings",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1100,
+        -120
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Starting values, saved only if the settings table is still empty.\n// Edit them later in the garage_settings data table, not here.\nif ($input.first().json.garage_name) return [];\nreturn [{ json: {\n  garage_name: 'Demo Garage',\n  garage_phone: '[your phone number]',\n  labour_rate_eur: 40,\n  vat_rate: 24,\n  confidence_threshold: 0.75,\n  premium_brands: 'BMW,Mercedes,Audi,Porsche,Lexus,Volvo,Land Rover,Jaguar,Mini',\n  premium_multiplier: 1.25,\n  owner_chat_id: '[your Telegram chat id]',\n  from_email: '[the email address quotes are sent from]',\n  booking_form_url: '[paste the Production URL of the Booking form]',\n  whatsapp_phone_number_id: '[your WhatsApp phone number ID]',\n  followup_hours: 20,\n  final_followup_days: 3,\n} }];"
+      },
+      "id": "6cc1b9d1-8e52-fd77-dac0-e2a0d1a278fd",
+      "name": "Default settings (if none yet)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_settings"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "5291adde-9f67-f607-cce7-acfbfe197b8f",
+      "name": "Save settings",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1540,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// SAMPLE price book for the demo. These are illustrative numbers, not market prices.\n// After setup, edit them in the garage_price_book data table.\nconst rows = [\n  ['oil_service', 'Oil and filter service', 'oil change, service, λάδια, σέρβις', 0.8, 45, 90, true],\n  ['brake_pads_front', 'Front brake pads', 'front pads, τακάκια εμπρός', 1.0, 40, 120, true],\n  ['brake_pads_rear', 'Rear brake pads', 'rear pads, τακάκια πίσω', 1.0, 35, 110, true],\n  ['brake_discs_pads_front', 'Front brake discs and pads', 'discs, rotors, δισκόπλακες', 1.5, 120, 300, true],\n  ['battery', 'Battery replacement', 'battery, won\\'t start, μπαταρία', 0.3, 80, 180, true],\n  ['ac_recharge', 'Air-con recharge', 'A/C, aircon, κλιματισμός, air condition', 0.8, 30, 60, true],\n  ['spark_plugs', 'Spark plugs', 'plugs, μπουζί', 0.8, 30, 90, true],\n  ['tyre_fit_balance', 'Fit and balance 4 tyres (tyres not included)', 'tyres, tires, λάστιχα, ελαστικά, balancing', 0.8, 0, 0, true],\n  ['diagnostic_scan', 'Diagnostic scan', 'check engine, warning light, diagnosis, διάγνωση', 0.5, 0, 0, true],\n  ['inspection_prep', 'Pre-inspection check (KTEO)', 'KTEO, ΚΤΕΟ, MOT, inspection', 1.0, 0, 0, true],\n  ['timing_belt', 'Timing belt kit and water pump', 'timing belt, cambelt, ιμάντας χρονισμού', 3.5, 150, 400, false],\n  ['clutch', 'Clutch replacement', 'clutch, συμπλέκτης', 5.0, 250, 600, false],\n];\nreturn rows.map(([job_code, name, keywords, labour_hours, parts_low_eur, parts_high_eur, auto_quote]) => ({ json: {\n  job_code, name, keywords, labour_hours, parts_low_eur, parts_high_eur, auto_quote,\n  notes: 'SAMPLE value – replace with your own',\n} }));"
+      },
+      "id": "5423063c-8cac-2858-2e4b-580b7223249e",
+      "name": "Sample price book",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        120
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "rowNotExists",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_price_book"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "job_code",
+              "condition": "eq",
+              "keyValue": "={{ $json.job_code }}"
+            }
+          ]
+        }
+      },
+      "id": "2c815edc-2727-92d9-1758-007353ffc4a9",
+      "name": "Job not saved yet?",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1320,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_price_book"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "48bdb7a3-4d89-a59d-3101-72d820ea2561",
+      "name": "Save price book",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1540,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Run setup": {
+      "main": [
+        [
+          {
+            "node": "Create settings table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create settings table": {
+      "main": [
+        [
+          {
+            "node": "Create price book table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create price book table": {
+      "main": [
+        [
+          {
+            "node": "Create leads table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create leads table": {
+      "main": [
+        [
+          {
+            "node": "Create events table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create events table": {
+      "main": [
+        [
+          {
+            "node": "Existing settings",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sample price book",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Existing settings": {
+      "main": [
+        [
+          {
+            "node": "Default settings (if none yet)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default settings (if none yet)": {
+      "main": [
+        [
+          {
+            "node": "Save settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sample price book": {
+      "main": [
+        [
+          {
+            "node": "Job not saved yet?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Job not saved yet?": {
+      "main": [
+        [
+          {
+            "node": "Save price book",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Athens",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

@@ -1,0 +1,1651 @@
+{
+  "name": "Garage Quote Agent · 01 Lead intake and instant quote",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 01 · Lead intake and instant quote\nA customer asks for a price on **WhatsApp**, the **web form**, or any tool that can call the **webhook**.\n\n1. AI reads the message: car, jobs, safety, confidence.\n2. **Rules, not AI, set the price** from the garage price book.\n3. Clear, routine requests get an estimate within seconds.\n4. Anything unclear goes to the owner on **Telegram** for a decision.\n5. Every lead, decision and reply is saved in the data tables.",
+        "width": 460,
+        "height": 300,
+        "color": 4
+      },
+      "id": "1760a822-39bd-0ce8-bdee-ff330d4bddd8",
+      "name": "About",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -420
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Confidence gate\nA quote goes out automatically only if **all** of these are true:\n- AI confidence ≥ the threshold in settings\n- every requested job is in the price book and allowed for auto-quoting\n- car make and model are known\n- no possible safety issue\n- there is a way to reply\n\nOtherwise the owner decides. The reasons are listed in the owner's message and saved with the lead.",
+        "width": 400,
+        "height": 300,
+        "color": 6
+      },
+      "id": "7efd15f5-9623-f3a1-247f-190a5b630505",
+      "name": "Gate",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        -420
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Owner decision\nThe owner gets a Telegram message with a button. The form lets them:\n- send the calculated estimate\n- send their own price\n- say they will call\n- decline\n\nNo answer within 30 minutes → the customer gets a holding message and the owner gets a reminder.",
+        "width": 380,
+        "height": 250,
+        "color": 3
+      },
+      "id": "6fc6dcb2-5b6c-e067-078a-5eb4bd0510f8",
+      "name": "Owner",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1820,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {
+          "messageStatusUpdates": []
+        }
+      },
+      "id": "e8b4b3e9-5c5e-03cb-58d4-f5dcc5d78549",
+      "name": "WhatsApp message",
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -160
+      ],
+      "webhookId": "b1d3c0de-0001-4a00-9000-000000000001"
+    },
+    {
+      "parameters": {
+        "formTitle": "Get a repair estimate",
+        "formDescription": "Tell us about your car and what it needs. We will email you a price estimate.",
+        "formFields": {
+          "values": [
+            {
+              "fieldName": "name",
+              "fieldLabel": "Your name",
+              "requiredField": true
+            },
+            {
+              "fieldName": "email",
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldName": "phone",
+              "fieldLabel": "Phone (optional)"
+            },
+            {
+              "fieldName": "car",
+              "fieldLabel": "Car",
+              "placeholder": "Make, model and year",
+              "requiredField": true
+            },
+            {
+              "fieldName": "request",
+              "fieldLabel": "What does the car need?",
+              "fieldType": "textarea",
+              "requiredField": true
+            },
+            {
+              "fieldName": "consent",
+              "fieldLabel": "Reminders",
+              "fieldType": "checkbox",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "You may send me up to two reminders about this estimate"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "responseMode": "onReceived",
+        "options": {
+          "path": "garage-quote",
+          "appendAttribution": false,
+          "buttonLabel": "Get my estimate",
+          "respondWithOptions": {
+            "values": {
+              "respondWith": "text",
+              "formSubmittedText": "Thank you. Your estimate is on its way to your inbox. If we need more details, we will contact you."
+            }
+          }
+        }
+      },
+      "id": "73c81e0d-8dcd-2c68-baf0-0dffb8228088",
+      "name": "Web form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        -560,
+        0
+      ],
+      "webhookId": "b1d3c0de-0001-4a00-9000-000000000002"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "garage-lead",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "1df51e40-076b-6c28-435e-02649bb22361",
+      "name": "Webhook (other channels)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -560,
+        160
+      ],
+      "webhookId": "b1d3c0de-0001-4a00-9000-000000000003"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Turns a web form, WhatsApp or webhook message into one standard lead.\nconst leads = [];\nconst now = new Date().toISOString();\nconst clean = (v) => (v === undefined || v === null ? '' : String(v).trim());\n\nfor (const item of $input.all()) {\n  const j = item.json;\n\n  // 1) WhatsApp Cloud API event (from the WhatsApp Trigger)\n  if (Array.isArray(j.messages)) {\n    const names = Object.fromEntries((j.contacts || []).map(c => [c.wa_id, c.profile?.name || '']));\n    for (const m of j.messages) {\n      if (m.type !== 'text') continue; // v0.1 reads text only; photos and voice notes go to the owner later\n      leads.push({\n        channel: 'whatsapp',\n        customer_name: clean(names[m.from]),\n        customer_email: '',\n        customer_phone: '+' + clean(m.from),\n        followup_consent: false,\n        car_text: '',\n        request_text: clean(m.text?.body),\n        received_at: m.timestamp ? new Date(Number(m.timestamp) * 1000).toISOString() : now,\n      });\n    }\n    continue;\n  }\n\n  // 2) n8n web form\n  if (j.formMode !== undefined || j.submittedAt !== undefined) {\n    leads.push({\n      channel: 'web_form',\n      customer_name: clean(j.name),\n      customer_email: clean(j.email).toLowerCase(),\n      customer_phone: clean(j.phone),\n      followup_consent: (() => { let c = j.consent; if (typeof c === 'string' && c.startsWith('[')) { try { c = JSON.parse(c); } catch (e) {} } return Array.isArray(c) ? c.length > 0 : !!c; })(),\n      car_text: clean(j.car),\n      request_text: clean(j.request),\n      received_at: now,\n    });\n    continue;\n  }\n\n  // 3) Generic webhook (website widget, email parser, other tools)\n  const b = j.body || j;\n  leads.push({\n    channel: clean(b.channel) || 'webhook',\n    customer_name: clean(b.name),\n    customer_email: clean(b.email).toLowerCase(),\n    customer_phone: clean(b.phone),\n    followup_consent: b.consent === true || b.consent === 'true',\n    car_text: clean(b.car),\n    request_text: clean(b.request || b.message),\n    received_at: now,\n  });\n}\n\nreturn leads.filter(l => l.request_text).map(json => ({ json }));"
+      },
+      "id": "f000c7d3-cb9c-50e9-f0a3-217f6fb4b411",
+      "name": "Normalise lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_settings"
+        },
+        "matchType": "allConditions",
+        "filters": {},
+        "limit": 1
+      },
+      "id": "e65bb2fa-1a2d-6470-bf44-f871e5c80c6b",
+      "name": "Load settings",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -100,
+        0
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_price_book"
+        },
+        "matchType": "allConditions",
+        "filters": {},
+        "returnAll": true
+      },
+      "id": "3dc2ef2c-cdba-766d-0766-ef46999d589a",
+      "name": "Load price book",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        120,
+        0
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gives the AI the customer's words plus the garage's list of priced jobs.\nconst jobs = $('Load price book').all().map(i => i.json).filter(r => r.job_code);\nconst jobList = jobs.map(r => '- ' + r.job_code + ': ' + r.name + (r.keywords ? ' (also: ' + r.keywords + ')' : '')).join('\\n');\n\nreturn $('Normalise lead').all().map(item => ({\n  json: {\n    ...item.json,\n    ai_text: 'PRICE LIST JOB CODES:\\n' + jobList +\n      '\\n\\nCAR (as typed by the customer, may be empty): ' + (item.json.car_text || '-') +\n      '\\n\\nCUSTOMER MESSAGE:\\n' + item.json.request_text,\n  },\n}));"
+      },
+      "id": "ec01dcc8-8c0f-feae-a0eb-7727dac0eeeb",
+      "name": "Build AI request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        340,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.ai_text }}",
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"language\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"el\",\n        \"greeklish\",\n        \"en\",\n        \"other\"\n      ],\n      \"description\": \"Language of the customer message\"\n    },\n    \"car_make\": {\n      \"type\": \"string\",\n      \"description\": \"Car make, empty string if unknown\"\n    },\n    \"car_model\": {\n      \"type\": \"string\",\n      \"description\": \"Car model, empty string if unknown\"\n    },\n    \"car_year\": {\n      \"type\": \"integer\",\n      \"description\": \"Model year, 0 if unknown\"\n    },\n    \"engine\": {\n      \"type\": \"string\",\n      \"description\": \"Engine or fuel if stated, else empty string\"\n    },\n    \"jobs\": {\n      \"type\": \"array\",\n      \"description\": \"Requested jobs that match a job code from the price list\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"job_code\": {\n            \"type\": \"string\"\n          },\n          \"customer_words\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\n          \"job_code\",\n          \"customer_words\"\n        ]\n      }\n    },\n    \"unmatched_requests\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      },\n      \"description\": \"Requested work that matches no job code, in the customer's words\"\n    },\n    \"symptoms_only\": {\n      \"type\": \"boolean\",\n      \"description\": \"True if the customer describes a problem without naming the repair\"\n    },\n    \"safety_flag\": {\n      \"type\": \"boolean\",\n      \"description\": \"True if the car may be unsafe to drive\"\n    },\n    \"urgency\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"low\",\n        \"normal\",\n        \"high\"\n      ]\n    },\n    \"confidence\": {\n      \"type\": \"number\",\n      \"description\": \"0 to 1: how sure you are that car and jobs are correct and complete\"\n    },\n    \"summary_en\": {\n      \"type\": \"string\",\n      \"description\": \"One sentence in English for the garage owner\"\n    }\n  },\n  \"required\": [\n    \"language\",\n    \"car_make\",\n    \"car_model\",\n    \"car_year\",\n    \"jobs\",\n    \"unmatched_requests\",\n    \"symptoms_only\",\n    \"safety_flag\",\n    \"urgency\",\n    \"confidence\",\n    \"summary_en\"\n  ]\n}",
+        "options": {
+          "systemPromptTemplate": "You read messages that customers send to a car repair garage in Greece. Messages may be in English, Greek or Greeklish (Greek written in Latin letters).\nExtract the car and the work requested.\nMap each requested job to exactly one job_code from the PRICE LIST JOB CODES. If requested work does not fit any job code, add it to unmatched_requests. Never guess a job code and never state prices.\nSet symptoms_only to true when the customer describes a problem (noise, warning light, leak, vibration) without naming the repair.\nSet safety_flag to true when the car may be unsafe to drive: brakes failing or grinding badly, steering problems, smoke, overheating, fuel smell.\nconfidence is how sure you are (0 to 1) that the car and the jobs are correct and complete. Use a low value when the message is vague."
+        }
+      },
+      "id": "7c720601-e7c5-c8a3-76e6-774182b7fe80",
+      "name": "AI reads the request",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        560,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-haiku-5-5"
+        },
+        "options": {
+          "temperature": 0,
+          "maxTokensToSample": 1024
+        }
+      },
+      "id": "c3d5458d-ed43-4d53-46bf-d9e663aef8d7",
+      "name": "Claude",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        560,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Rules, not AI, decide the price and whether the quote can go out automatically.\nconst s = $('Load settings').first().json;\nconst book = Object.fromEntries($('Load price book').all().map(i => [i.json.job_code, i.json]));\nconst leads = $('Build AI request').all();\nconst ai = $input.all();\nconst threshold = Number(s.confidence_threshold);\nconst rate = Number(s.labour_rate_eur);\nconst vat = Number(s.vat_rate) / 100;\nconst premium = String(s.premium_brands || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);\nconst roundDown = (x) => Math.floor(x / 5) * 5;\nconst roundUp = (x) => Math.ceil(x / 5) * 5;\nconst eur = (x) => '€' + x.toLocaleString('en-GB');\n\nreturn leads.map((lead, i) => {\n  const L = lead.json;\n  const out = ai[i]?.json?.output;\n  const reasons = [];\n  if (!out) reasons.push('AI could not read the message');\n\n  const x = out || {};\n  const make = String(x.car_make || '').trim();\n  const model = String(x.car_model || '').trim();\n  const year = Number(x.car_year) || 0;\n  const conf = Number(x.confidence) || 0;\n  const requested = Array.isArray(x.jobs) ? x.jobs : [];\n  const unmatched = (Array.isArray(x.unmatched_requests) ? x.unmatched_requests : []).map(String);\n\n  // Map AI job codes to the price book. Unknown codes count as unmatched.\n  const matched = [];\n  for (const j of requested) {\n    const row = book[j.job_code];\n    if (row) { if (!matched.find(m => m.job_code === row.job_code)) matched.push(row); }\n    else unmatched.push(j.customer_words || j.job_code);\n  }\n\n  if (out) {\n    if (conf < threshold) reasons.push('AI confidence ' + conf.toFixed(2) + ' is below ' + threshold);\n    if (x.safety_flag) reasons.push('Possible safety issue');\n    if (x.symptoms_only && !matched.length) reasons.push('Symptoms only, needs diagnosis');\n    if (!matched.length) reasons.push('No job matched the price book');\n    if (unmatched.length) reasons.push('Not in price book: ' + unmatched.join('; '));\n    for (const m of matched) if (!m.auto_quote) reasons.push(m.name + ' is set to owner-only pricing');\n    if (!make || !model) reasons.push('Car make or model missing');\n  }\n  if (L.channel !== 'whatsapp' && !L.customer_email) reasons.push('No email to reply to');\n\n  // Price: labour x rate (x premium multiplier) + parts range, plus VAT. Rounded to €5.\n  const mult = premium.includes(make.toLowerCase()) ? Number(s.premium_multiplier) || 1 : 1;\n  let low = 0, high = 0;\n  const lines = matched.map(m => {\n    const labour = Number(m.labour_hours) * rate * mult;\n    const lo = roundDown((labour + Number(m.parts_low_eur)) * (1 + vat));\n    const hi = roundUp((labour * 1.2 + Number(m.parts_high_eur) * mult) * (1 + vat));\n    low += lo; high += hi;\n    return { name: m.name, lo, hi };\n  });\n\n  const route = reasons.length ? 'owner_review' : 'auto';\n  const leadId = 'L-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2, 6).toUpperCase();\n  const token = Math.random().toString(36).slice(2, 12);\n  const car = [make, model, year || ''].filter(Boolean).join(' ');\n  const bookingLink = s.booking_form_url + (String(s.booking_form_url).includes('?') ? '&' : '?') + 'lead_id=' + encodeURIComponent(leadId) + '&token=' + token;\n  const first = (L.customer_name || '').split(' ')[0];\n\n  const quoteText = [\n    'Hi' + (first ? ' ' + first : '') + ',',\n    '',\n    'Thanks for contacting ' + s.garage_name + '. Here is our estimate for your ' + (car || 'car') + ':',\n    '',\n    ...lines.map(l => '• ' + l.name + ': ' + eur(l.lo) + ' – ' + eur(l.hi)),\n    '',\n    'Estimated total: ' + eur(low) + ' – ' + eur(high) + ' (incl. ' + s.vat_rate + '% VAT).',\n    'The final price is confirmed after we inspect the car. We will always ask you before doing any extra work.',\n    '',\n    'Book a time here: ' + bookingLink,\n    'Or call us on ' + s.garage_phone + '.',\n    '',\n    s.garage_name,\n  ].join('\\n');\n\n  return { json: {\n    lead_id: leadId,\n    token,\n    received_at: L.received_at,\n    channel: L.channel,\n    customer_name: L.customer_name,\n    customer_email: L.customer_email,\n    customer_phone: L.customer_phone,\n    followup_consent: L.followup_consent,\n    request_text: L.request_text,\n    language: String(x.language || ''),\n    car_make: make,\n    car_model: model,\n    car_year: year,\n    jobs_matched: matched.map(m => m.job_code).join(','),\n    jobs_unmatched: unmatched.join('; '),\n    ai_confidence: conf,\n    ai_safety_flag: !!x.safety_flag,\n    ai_summary: String(x.summary_en || ''),\n    route,\n    review_reasons: reasons.join(' | '),\n    quote_low: low,\n    quote_high: high,\n    quote_lines: lines.map(l => l.name + ': ' + eur(l.lo) + ' – ' + eur(l.hi)).join('\\n'),\n    booking_link: bookingLink,\n    status: route === 'auto' ? 'quoted' : 'awaiting_owner',\n    reply_subject: 'Your estimate from ' + s.garage_name + (car ? ' – ' + car : ''),\n    reply_text: route === 'auto' ? quoteText : '',\n  } };\n});"
+      },
+      "id": "9bf72441-d467-eb7e-3434-656be242c497",
+      "name": "Price & route",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_leads"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $json.lead_id }}",
+            "token": "={{ $json.token }}",
+            "received_at": "={{ $json.received_at }}",
+            "channel": "={{ $json.channel }}",
+            "customer_name": "={{ $json.customer_name }}",
+            "customer_email": "={{ $json.customer_email }}",
+            "customer_phone": "={{ $json.customer_phone }}",
+            "followup_consent": "={{ $json.followup_consent }}",
+            "request_text": "={{ $json.request_text }}",
+            "language": "={{ $json.language }}",
+            "car_make": "={{ $json.car_make }}",
+            "car_model": "={{ $json.car_model }}",
+            "car_year": "={{ $json.car_year }}",
+            "jobs_matched": "={{ $json.jobs_matched }}",
+            "jobs_unmatched": "={{ $json.jobs_unmatched }}",
+            "ai_confidence": "={{ $json.ai_confidence }}",
+            "ai_safety_flag": "={{ $json.ai_safety_flag }}",
+            "ai_summary": "={{ $json.ai_summary }}",
+            "route": "={{ $json.route }}",
+            "review_reasons": "={{ $json.review_reasons }}",
+            "quote_low": "={{ $json.quote_low }}",
+            "quote_high": "={{ $json.quote_high }}",
+            "status": "={{ $json.status }}",
+            "followup_stage": "={{ 0 }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "token",
+              "displayName": "token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "date",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "channel",
+              "displayName": "channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "customer_name",
+              "displayName": "customer_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "customer_email",
+              "displayName": "customer_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "customer_phone",
+              "displayName": "customer_phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "followup_consent",
+              "displayName": "followup_consent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "request_text",
+              "displayName": "request_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "language",
+              "displayName": "language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "car_make",
+              "displayName": "car_make",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "car_model",
+              "displayName": "car_model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "car_year",
+              "displayName": "car_year",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "jobs_matched",
+              "displayName": "jobs_matched",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "jobs_unmatched",
+              "displayName": "jobs_unmatched",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_confidence",
+              "displayName": "ai_confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_safety_flag",
+              "displayName": "ai_safety_flag",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "ai_summary",
+              "displayName": "ai_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "route",
+              "displayName": "route",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "review_reasons",
+              "displayName": "review_reasons",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "quote_low",
+              "displayName": "quote_low",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "quote_high",
+              "displayName": "quote_high",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "owner_decision",
+              "displayName": "owner_decision",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "owner_note",
+              "displayName": "owner_note",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "last_message",
+              "displayName": "last_message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "first_reply_at",
+              "displayName": "first_reply_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "date",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "response_minutes",
+              "displayName": "response_minutes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "followup_stage",
+              "displayName": "followup_stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "next_followup_at",
+              "displayName": "next_followup_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "date",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "booking_pref",
+              "displayName": "booking_pref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "cca0f4e8-1f32-622e-ebbd-e65edb35c988",
+      "name": "Save lead",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1020,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_events"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $json.lead_id }}",
+            "event": "={{ \"routed_\" + $json.route }}",
+            "detail": "={{ \"confidence \" + $json.ai_confidence + ($json.review_reasons ? \" | \" + $json.review_reasons : \"\") }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "event",
+              "displayName": "event",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "detail",
+              "displayName": "detail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "d6a4dfb4-563a-a484-3188-9f77cb4c6524",
+      "name": "Log routing decision",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1240,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fbe0e6b1-e11e-0195-8e5e-e7e4b9d5f268",
+              "leftValue": "={{ $json.route }}",
+              "rightValue": "auto",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a248ceec-94bd-b6e2-dc03-f1e38f25b51d",
+      "name": "Auto-quote?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "={{ $('Load settings').first().json.owner_chat_id }}",
+        "message": "={{ (() => {\nconst j = $('Price & route').item.json;\n// Telegram reads this message as Markdown, so strip characters that would break it.\nconst t = (v) => String(v ?? '').replace(/[_*\\x60\\[\\]]/g, ' ');\nreturn [\n  'New quote request needs your decision',\n  '',\n  'Customer: ' + t(j.customer_name || 'unknown') + ' (' + t(j.channel) + ')',\n  'Contact: ' + t([j.customer_phone, j.customer_email].filter(Boolean).join(' / ')),\n  'Car: ' + t([j.car_make, j.car_model, j.car_year || ''].filter(Boolean).join(' ') || 'not stated'),\n  '',\n  'They wrote: \"' + t(j.request_text) + '\"',\n  '',\n  'Why it was not sent automatically:',\n  ...String(j.review_reasons).split(' | ').map(r => '- ' + t(r)),\n  '',\n  'Calculated estimate: ' + (j.quote_high ? '€' + j.quote_low + ' – €' + j.quote_high : 'none'),\n  t(j.quote_lines || ''),\n  '',\n  'Lead ' + t(j.lead_id),\n].join('\\n');\n})() }}",
+        "responseType": "customForm",
+        "defineForm": "json",
+        "jsonOutput": "=[\n  {\n    \"fieldLabel\": \"Decision\",\n    \"fieldType\": \"dropdown\",\n    \"fieldOptions\": {\n      \"values\": [\n        {\n          \"option\": \"Send estimate as calculated\"\n        },\n        {\n          \"option\": \"Send estimate with my price\"\n        },\n        {\n          \"option\": \"I will call the customer\"\n        },\n        {\n          \"option\": \"Decline the job\"\n        }\n      ]\n    },\n    \"requiredField\": true\n  },\n  {\n    \"fieldLabel\": \"Your price from (€ incl. VAT)\",\n    \"fieldType\": \"number\"\n  },\n  {\n    \"fieldLabel\": \"Your price to (€ incl. VAT)\",\n    \"fieldType\": \"number\"\n  },\n  {\n    \"fieldLabel\": \"Note to the customer\",\n    \"fieldType\": \"textarea\"\n  }\n]",
+        "options": {
+          "messageButtonLabel": "Decide",
+          "responseFormTitle": "Quote decision",
+          "responseFormButtonLabel": "Send",
+          "appendAttribution": false,
+          "limitWaitTime": {
+            "values": {
+              "limitType": "afterTimeInterval",
+              "resumeAmount": 30,
+              "resumeUnit": "minutes"
+            }
+          }
+        }
+      },
+      "id": "a17d6416-231f-ec7e-0d9f-70d759f97acc",
+      "name": "Ask owner on Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1500,
+        160
+      ],
+      "webhookId": "b1d3c0de-0001-4a00-9000-000000000004"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Turns the owner's answer (or no answer) into the customer message and new status.\nconst s = $('Load settings').first().json;\nconst eur = (x) => '€' + Number(x).toLocaleString('en-GB');\n\nreturn $input.all().map((item, i) => {\n  const lead = $('Price & route').itemMatching(i).json;\n  // The response form returns answers keyed by field label.\n  const r = item.json.data || {};\n  const decision = String(r['Decision'] || '');\n  const first = (lead.customer_name || '').split(' ')[0];\n  const hi = 'Hi' + (first ? ' ' + first : '') + ',';\n  const note = String(r['Note to the customer'] || '').trim();\n  const low = Number(r['Your price from (€ incl. VAT)']) || Number(lead.quote_low) || 0;\n  const high = Number(r['Your price to (€ incl. VAT)']) || Number(lead.quote_high) || 0;\n  const car = [lead.car_make, lead.car_model, lead.car_year || ''].filter(Boolean).join(' ');\n\n  let status, text, ownerFyi = '';\n  if (decision.startsWith('Send estimate')) {\n    status = 'quoted';\n    const useOwner = decision.includes('my price');\n    text = [hi, '',\n      'Thanks for contacting ' + s.garage_name + '. Here is our estimate' + (car ? ' for your ' + car : '') + ':', '',\n      ...(useOwner ? [] : String(lead.quote_lines || '').split('\\n').filter(Boolean).map(l => '• ' + l)),\n      'Estimated total: ' + eur(low) + ' – ' + eur(high) + ' (incl. ' + s.vat_rate + '% VAT).',\n      ...(note ? ['', note] : []),\n      '', 'The final price is confirmed after we inspect the car. We will always ask you before doing any extra work.',\n      '', 'Book a time here: ' + lead.booking_link, 'Or call us on ' + s.garage_phone + '.', '', s.garage_name].join('\\n');\n  } else if (decision.startsWith('I will call')) {\n    status = 'needs_call';\n    text = [hi, '', 'Thanks for contacting ' + s.garage_name + '. We would like to ask you a couple of questions to give you an accurate price, so we will call you shortly' + (lead.customer_phone ? ' on ' + lead.customer_phone : '') + '.', ...(note ? ['', note] : []), '', s.garage_name].join('\\n');\n  } else if (decision.startsWith('Decline')) {\n    status = 'declined';\n    text = [hi, '', 'Thanks for contacting ' + s.garage_name + '. Unfortunately we cannot take on this job.', ...(note ? ['', note] : []), '', s.garage_name].join('\\n');\n  } else {\n    // No answer in time: the customer still hears from us, and the owner gets a nudge.\n    status = 'needs_call';\n    text = [hi, '', 'Thanks for contacting ' + s.garage_name + '. A mechanic needs to look at your request, so we will get back to you personally' + (lead.customer_phone ? ' by phone (' + lead.customer_phone + ')' : '') + ' as soon as possible.', '', s.garage_name].join('\\n');\n    ownerFyi = 'No decision within the time limit, so the customer got a holding message. Please call them: ' + (lead.customer_name || '') + ' ' + (lead.customer_phone || lead.customer_email || '') + ' (lead ' + lead.lead_id + ').';\n  }\n\n  return { json: {\n    ...lead,\n    status,\n    quote_low: status === 'quoted' ? low : lead.quote_low,\n    quote_high: status === 'quoted' ? high : lead.quote_high,\n    owner_decision: decision || 'no answer (timed out)',\n    owner_note: note,\n    reply_text: text,\n    owner_fyi: ownerFyi,\n  } };\n});"
+      },
+      "id": "e26c60b0-b7e9-8295-6610-91d18ff7ac0c",
+      "name": "Apply owner decision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1740,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_events"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $json.lead_id }}",
+            "event": "owner_decision",
+            "detail": "={{ $json.owner_decision + ($json.owner_note ? \" | note: \" + $json.owner_note : \"\") }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "event",
+              "displayName": "event",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "detail",
+              "displayName": "detail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "24d706c7-c648-0321-5926-2d82abc99000",
+      "name": "Log owner decision",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1980,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Decides how the reply goes out and when the first follow-up is due.\nconst s = $('Load settings').first().json;\nreturn $input.all().map((item, idx) => {\n  const j = { ...$('Price & route').itemMatching(idx).json, ...item.json };\n  const via = j.channel === 'whatsapp' ? 'whatsapp' : (j.customer_email ? 'email' : 'none');\n  // WhatsApp: one reminder inside the 24-hour customer service window, timed from the customer's message.\n  // Email: reminders only with consent.\n  let next = null;\n  if (j.status === 'quoted') {\n    const h = Number(s.followup_hours) || 20;\n    if (via === 'whatsapp') next = new Date(new Date(j.received_at).getTime() + Math.min(h, 23) * 3600e3).toISOString();\n    else if (via === 'email' && j.followup_consent) next = new Date(Date.now() + h * 3600e3).toISOString();\n  }\n  const fyi = j.owner_fyi !== undefined ? j.owner_fyi : (j.route === 'auto'\n    ? 'Estimate sent automatically to ' + (j.customer_name || 'a customer') + ' via ' + via + ': ' + [j.car_make, j.car_model].filter(Boolean).join(' ') + ', €' + j.quote_low + ' – €' + j.quote_high + ' (lead ' + j.lead_id + ').'\n    : '');\n  return { json: { ...j, reply_via: via, next_followup_at: next, owner_fyi: fyi } };\n});"
+      },
+      "id": "9cafdf65-9730-445a-f41f-8df08f1b9de8",
+      "name": "Prepare reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "11932a3a-9081-5419-b918-44bb15cc42e0",
+                    "leftValue": "={{ $json.reply_via }}",
+                    "rightValue": "whatsapp",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "WhatsApp"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "edbb3d15-81bf-dc88-331b-01d28e2600a9",
+                    "leftValue": "={{ $json.reply_via }}",
+                    "rightValue": "email",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Email"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "No channel"
+        }
+      },
+      "id": "273cc837-09e7-5fec-a066-4691841ae78b",
+      "name": "Reply channel",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        2200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "={{ $('Load settings').first().json.whatsapp_phone_number_id }}",
+        "recipientPhoneNumber": "={{ $json.customer_phone }}",
+        "textBody": "={{ $json.reply_text }}",
+        "additionalFields": {}
+      },
+      "id": "c4917f17-b4f6-e779-4a44-67bf672ffdc6",
+      "name": "Reply on WhatsApp",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        2440,
+        -160
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $('Load settings').first().json.garage_name }} <{{ $('Load settings').first().json.from_email }}>",
+        "toEmail": "={{ $json.customer_email }}",
+        "subject": "={{ $json.reply_subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.reply_text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "7cb9e57c-ac56-186d-2c0f-54d062a8c843",
+      "name": "Reply by email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2440,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "garage_leads"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "lead_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Prepare reply').item.json.lead_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "={{ $('Prepare reply').item.json.status }}",
+            "quote_low": "={{ $('Prepare reply').item.json.quote_low }}",
+            "quote_high": "={{ $('Prepare reply').item.json.quote_high }}",
+            "owner_decision": "={{ $('Prepare reply').item.json.owner_decision || '' }}",
+            "owner_note": "={{ $('Prepare reply').item.json.owner_note || '' }}",
+            "last_message": "={{ $('Prepare reply').item.json.reply_text }}",
+            "first_reply_at": "={{ $now.toISO() }}",
+            "response_minutes": "={{ Math.round(($now.toMillis() - new Date($('Prepare reply').item.json.received_at).getTime()) / 60000) }}",
+            "next_followup_at": "={{ $('Prepare reply').item.json.next_followup_at }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "token",
+              "displayName": "token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "date",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "channel",
+              "displayName": "channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "customer_name",
+              "displayName": "customer_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "customer_email",
+              "displayName": "customer_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "customer_phone",
+              "displayName": "customer_phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "followup_consent",
+              "displayName": "followup_consent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "request_text",
+              "displayName": "request_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "language",
+              "displayName": "language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "car_make",
+              "displayName": "car_make",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "car_model",
+              "displayName": "car_model",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "car_year",
+              "displayName": "car_year",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "jobs_matched",
+              "displayName": "jobs_matched",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "jobs_unmatched",
+              "displayName": "jobs_unmatched",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_confidence",
+              "displayName": "ai_confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_safety_flag",
+              "displayName": "ai_safety_flag",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "ai_summary",
+              "displayName": "ai_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "route",
+              "displayName": "route",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "review_reasons",
+              "displayName": "review_reasons",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "quote_low",
+              "displayName": "quote_low",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "quote_high",
+              "displayName": "quote_high",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "owner_decision",
+              "displayName": "owner_decision",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "owner_note",
+              "displayName": "owner_note",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "last_message",
+              "displayName": "last_message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "first_reply_at",
+              "displayName": "first_reply_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "date",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "response_minutes",
+              "displayName": "response_minutes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "followup_stage",
+              "displayName": "followup_stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "next_followup_at",
+              "displayName": "next_followup_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "date",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "booking_pref",
+              "displayName": "booking_pref",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "3b4dc8e4-8422-59d6-1eab-4916de41b6ac",
+      "name": "Update lead",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        2680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "212be7b4-e4d1-c7e6-1eb0-1b0f9392c38f",
+              "leftValue": "={{ $('Prepare reply').item.json.owner_fyi }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c798c137-3a93-fb44-6518-d3dbf90983c6",
+      "name": "Tell owner?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2900,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Load settings').first().json.owner_chat_id }}",
+        "text": "={{ String($('Prepare reply').item.json.owner_fyi).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "0efe05e5-c605-5821-2b0e-7c38c79c7436",
+      "name": "Owner update on Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3120,
+        -20
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Claude": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI reads the request",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp message": {
+      "main": [
+        [
+          {
+            "node": "Normalise lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Web form": {
+      "main": [
+        [
+          {
+            "node": "Normalise lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook (other channels)": {
+      "main": [
+        [
+          {
+            "node": "Normalise lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalise lead": {
+      "main": [
+        [
+          {
+            "node": "Load settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load settings": {
+      "main": [
+        [
+          {
+            "node": "Load price book",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load price book": {
+      "main": [
+        [
+          {
+            "node": "Build AI request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build AI request": {
+      "main": [
+        [
+          {
+            "node": "AI reads the request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI reads the request": {
+      "main": [
+        [
+          {
+            "node": "Price & route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Price & route": {
+      "main": [
+        [
+          {
+            "node": "Save lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save lead": {
+      "main": [
+        [
+          {
+            "node": "Auto-quote?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log routing decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auto-quote?": {
+      "main": [
+        [
+          {
+            "node": "Prepare reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask owner on Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask owner on Telegram": {
+      "main": [
+        [
+          {
+            "node": "Apply owner decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apply owner decision": {
+      "main": [
+        [
+          {
+            "node": "Prepare reply",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log owner decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare reply": {
+      "main": [
+        [
+          {
+            "node": "Reply channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply channel": {
+      "main": [
+        [
+          {
+            "node": "Reply on WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply by email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply on WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Update lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply by email": {
+      "main": [
+        [
+          {
+            "node": "Update lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update lead": {
+      "main": [
+        [
+          {
+            "node": "Tell owner?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tell owner?": {
+      "main": [
+        [
+          {
+            "node": "Owner update on Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Athens",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

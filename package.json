@@ -1,0 +1,20 @@
+{
+  "name": "garage-quote-agent",
+  "version": "0.1.0",
+  "description": "n8n workflows that answer car-repair price requests from WhatsApp, a web form or a webhook, with AI extraction, rule-based pricing and owner approval on Telegram.",
+  "private": true,
+  "author": "Konstantinos Xeras",
+  "license": "MIT",
+  "keywords": ["n8n", "automation", "whatsapp", "telegram", "ai", "human-in-the-loop", "lead-response"],
+  "n8n": {
+    "testedWith": "2.47.7",
+    "workflows": [
+      "workflows/00-setup.json",
+      "workflows/01-lead-intake-and-quote.json",
+      "workflows/02-booking-requests.json",
+      "workflows/03-follow-ups.json",
+      "workflows/04-weekly-owner-report.json",
+      "workflows/99-error-alerts.json"
+    ]
+  }
+}
