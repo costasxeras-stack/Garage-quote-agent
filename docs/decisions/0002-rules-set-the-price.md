@@ -1,4 +1,4 @@
-# 0002: AI reads the message; rules set the price
+# 0002: AI reads the message. Rules set the price
 
 **Status:** Accepted · **Date:** 2026-11-15
 
@@ -10,6 +10,6 @@ Claude only extracts structured facts: car, job codes from the garage's own list
 
 ## Consequences
 - Prices are predictable, explainable and controlled by the owner in a table.
-- Jobs not in the price book cannot be quoted automatically; they become a weekly "add this to your price book" list.
-- Ranges are wide by design; the reply says the final price is confirmed after inspection.
+- Jobs not in the price book cannot be quoted automatically. They become a weekly "add this to your price book" list.
+- Ranges are wide by design. The reply says the final price is confirmed after inspection.
 - The quality of the price list now limits the product, more than the quality of the AI.

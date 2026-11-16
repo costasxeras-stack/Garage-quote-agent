@@ -1,6 +1,6 @@
 {
   "name": "garage-quote-agent",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "n8n workflows that answer car-repair price requests from WhatsApp, a web form or a webhook, with AI extraction, rule-based pricing and owner approval on Telegram.",
   "private": true,
   "author": "Konstantinos Xeras",

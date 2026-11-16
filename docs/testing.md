@@ -11,31 +11,31 @@
 | A1 | Web form, routine job, known car | Estimate emailed with per-job lines, total incl. VAT and booking link | Pass |
 | A2 | Same | Owner gets an FYI on WhatsApp | Pass |
 | A3 | Same, consent ticked | Lead saved as `quoted`, consent stored, follow-up scheduled | Pass |
-| B1 | Owner-only job (timing belt), low confidence, special characters in message | Owner asked on WhatsApp with reasons and a decision link; WhatsApp formatting characters stripped | Pass |
+| B1 | Owner-only job (timing belt), low confidence, special characters in message | Owner asked on WhatsApp with reasons and a decision link. WhatsApp formatting characters stripped | Pass |
 | B2 | Owner chooses "my price" with a note | Customer gets the owner's price and note | Pass |
 | B3 | Same, no consent | Lead `quoted`, owner decision stored, no follow-up scheduled | Pass |
-| C1 | Vague symptom, owner chooses "I will call" | Customer told we will call; lead `needs_call` | Pass |
+| C1 | Vague symptom, owner chooses "I will call" | Customer told we will call. Lead `needs_call` | Pass |
 | D1 | WhatsApp message (signed like Meta) in Greeklish | Estimate sent back on WhatsApp | Pass |
 | D2 | Same | Follow-up scheduled inside the 24-hour window | Pass |
 | D3 | WhatsApp event with a wrong signature | Ignored: no AI call, no reply | Pass |
-| D4 | The owner's own "hi" to the garage number | Not treated as a lead; nothing sent | Pass |
+| D4 | The owner's own "hi" to the garage number | Not treated as a lead. Nothing sent | Pass |
 | E1 | AI service fails | Lead goes to the owner with "AI could not read the message" | Pass (after the AI node's built-in retries, about 2 minutes) |
 | E2 | Possible safety issue (smoke) | Lead goes to the owner | Pass |
 | F1 | Booking link opened | Lead ID and token prefilled as hidden fields | Pass |
-| F2 | Booking submitted | Lead `booking_requested`; owner told | Pass |
-| F3 | Booking with a wrong token | Rejected and logged; owner not alerted | Pass |
-| G1 | Email lead due a follow-up | Reminder 1 sent; stage 1 | Pass |
-| G2 | Due again | Final reminder; stage 2 | Pass |
-| G3 | Due again | No message; lead `lost_no_reply` | Pass |
+| F2 | Booking submitted | Lead `booking_requested`. Owner told | Pass |
+| F3 | Booking with a wrong token | Rejected and logged. Owner not alerted | Pass |
+| G1 | Email lead due a follow-up | Reminder 1 sent. Stage 1 | Pass |
+| G2 | Due again | Final reminder. Stage 2 | Pass |
+| G3 | Due again | No message. Lead `lost_no_reply` | Pass |
 | G4 | WhatsApp lead due a follow-up, twice | One reminder, then `lost_no_reply` (no messages after 24 h) | Pass |
 | H1 | Weekly report | WhatsApp report with counts, rates and price-book gaps | Pass |
-| T1 | Owner does not answer (time limit shortened for the test) | Customer gets a holding message; owner reminded; lead `needs_call` | Pass |
+| T1 | Owner does not answer (time limit shortened for the test) | Customer gets a holding message. Owner reminded. Lead `needs_call` | Pass |
 | X1 | WhatsApp fails while asking the owner | Error workflow alerts the owner with the failed step and run link | Pass |
 
 Setup (00) was also run twice to confirm it does not duplicate settings or prices.
 
 ## First live check on n8n Cloud (15 November 2026)
-One routine request ("front brake pads, Toyota Yaris 2015") was sent through workflow 01 with the real Claude model. Claude extracted the car, year, engine and the `brake_pads_front` job with confidence 0.9; the rules priced it and routed it to an automatic reply. This is a single example, not an evaluation.
+One routine request ("front brake pads, Toyota Yaris 2015") was sent through workflow 01 with the real Claude model. Claude extracted the car, year, engine and the `brake_pads_front` job with confidence 0.9. The rules priced it and routed it to an automatic reply. This is a single example, not an evaluation.
 
 ## Not yet tested
 - Claude on a representative set of real customer messages (extraction quality, confidence calibration)

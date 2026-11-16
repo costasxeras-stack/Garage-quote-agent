@@ -10,5 +10,5 @@ The owner's decision waits at most 30 minutes. If there is no answer, the custom
 
 ## Consequences
 - Every customer hears back within about half an hour, even in the worst case.
-- A holding message is weaker than an estimate; the weekly report counts `needs_call` leads so the owner can see the cost.
-- The 30-minute limit is fixed in the node; making it a setting is a small follow-up.
+- A holding message is weaker than an estimate. The weekly report counts `needs_call` leads so the owner can see the cost.
+- The 30-minute limit is fixed in the node. Making it a setting is a small follow-up.
