@@ -10,6 +10,6 @@ Build it as six n8n workflows using standard nodes, with logic in a few small, c
 
 ## Consequences
 - Human-in-the-loop, forms, schedules, retries and the run history come from n8n, not from custom code.
-- Anyone can open the canvas and see the flow; the README diagram matches what runs.
-- It needs an n8n instance, which costs money after the trial; the portfolio repo stays usable because the workflow files can be imported anywhere.
+- Anyone can open the canvas and see the flow. The README diagram matches what runs.
+- It needs an n8n instance, which costs money after the trial. The portfolio repo stays usable because the workflow files can be imported anywhere.
 - No server.js or Render service, a deliberate deviation from my default stack.

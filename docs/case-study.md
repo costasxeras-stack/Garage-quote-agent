@@ -6,9 +6,9 @@
 How much of a garage's first reply to a price request can be automated safely, and where must the owner stay in control?
 
 ## Approach
-- Split the problem in two: **understanding** a free-text message (a job for AI) and **pricing** it (a job for rules the owner controls).
-- Put a **confidence gate** between them: automate only when every check passes, otherwise ask the owner with the reasons.
-- Meet customers where they are: **WhatsApp first**, plus a web form and a webhook.
+- Split the problem in two: understanding a free-text message (a job for AI) and pricing it (a job for rules the owner controls).
+- Put a confidence gate between them: automate only when every check passes, otherwise ask the owner with the reasons.
+- Start with WhatsApp, because that is where customers already message garages. Add a web form and a webhook.
 - Record every lead, routing decision and owner decision, so the garage can measure where leads are lost.
 
 ## Headline numbers
@@ -24,16 +24,16 @@ Source: [pilot garage, anonymised] · Period: [dates]
 
 ## Findings
 
-**1. The gate routes uncertain requests to the owner instead of guessing.** *Confirmed in testing.* Vague messages ("strange noise when I turn"), possible safety issues (smoke) and owner-only jobs (timing belt) all went to the owner with the reasons listed. Routine jobs with a known car were answered automatically. *Why it matters:* the owner only sees the requests that need judgement.
+1. The gate routes uncertain requests to the owner instead of guessing. *Confirmed in testing.* Vague messages ("strange noise when I turn"), possible safety issues (smoke) and owner-only jobs (timing belt) all went to the owner with the reasons listed. Routine jobs with a known car were answered automatically. *Why it matters:* the owner only sees the requests that need judgement.
 
-**2. Messaging rules shape the product, not just the integration.** *Confirmed by design.* WhatsApp allows free-form replies only within 24 hours of the customer's last message, so the follow-up is scheduled inside that window, and owner alerts go to the owner's WhatsApp, which only works while the owner keeps the 24-hour window open with a daily message.
+2. Messaging rules shape the product as well as the integration. *Confirmed by design.* WhatsApp allows free-form replies only within 24 hours of the customer's last message, so the follow-up is scheduled inside that window, and owner alerts go to the owner's WhatsApp, which only works while the owner keeps the 24-hour window open with a daily message.
 
-**3. "Not in the price book" is a demand signal.** *Hypothesis.* The weekly report lists requests that matched no job. I expect these to show which services to price next.
+3. "Not in the price book" is a demand signal. *Hypothesis.* The weekly report lists requests that matched no job. I expect these to show which services to price next.
 
-**4. Most requests are routine enough to answer automatically.** *Hypothesis.* Expected share: [X]%. To be measured in a pilot.
+4. Most requests are routine enough to answer automatically. *Hypothesis.* Expected share: [X]%. To be measured in a pilot.
 
 ## What my own approach got wrong
-[To be written after the pilot. Candidates to watch: threshold too strict or too loose; price ranges too wide to be useful; customers ignoring the booking form and replying on WhatsApp instead.]
+[To be written after the pilot. Candidates to watch: threshold too strict or too loose. Price ranges too wide to be useful. Customers ignoring the booking form and replying on WhatsApp instead.]
 
 ## What I would do next
 - Ask a clarifying question on WhatsApp when the car is missing, instead of sending it to the owner

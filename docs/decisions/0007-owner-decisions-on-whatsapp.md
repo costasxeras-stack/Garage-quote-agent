@@ -3,10 +3,10 @@
 **Status:** Accepted · Replaces the Telegram part of [0003](0003-confidence-gate-and-owner-approval.md) · **Date:** 2026-11-15
 
 ## Context
-In 0003 the owner's console was Telegram, because WhatsApp messages started by the business need Meta-approved templates outside a 24-hour window. Garage owners already live in WhatsApp; asking them to install and watch a second app is friction that a small garage will not accept.
+In 0003 the owner's console was Telegram, because WhatsApp messages started by the business need Meta-approved templates outside a 24-hour window. Garage owners already live in WhatsApp. Asking them to install and watch a second app is friction that a small garage will not accept.
 
 ## Decision
-All owner messages (decision requests, automatic-reply updates, booking requests, the weekly report and error alerts) go from the garage's WhatsApp number to the owner's own WhatsApp, using n8n's WhatsApp **send and wait** for decisions. For v0.1 the owner keeps the 24-hour window open by sending the garage number any short message once a day; the workflow recognises the owner's number and does not treat those messages as leads.
+All owner messages (decision requests, automatic-reply updates, booking requests, the weekly report and error alerts) go from the garage's WhatsApp number to the owner's own WhatsApp, using n8n's WhatsApp send and wait for decisions. For v0.1 the owner keeps the 24-hour window open by sending the garage number any short message once a day. The workflow recognises the owner's number and does not treat those messages as leads.
 
 ## Consequences
 - One app for the owner and one messaging credential for the whole product.
