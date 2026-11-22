@@ -4,7 +4,7 @@
 
 Built for independent repair garages in Greece. WhatsApp is the first customer channel. There is also a web form and a generic webhook.
 
-Live demo: [form URL] · Current version: **v0.1.1** ([changelog](CHANGELOG.md))
+Live demo: [form URL] · Current version: **v0.2.0** ([changelog](CHANGELOG.md))
 
 ## Why this exists
 
@@ -27,7 +27,7 @@ The question I wanted to answer: how much of the first reply can be automated sa
 
 ```mermaid
 flowchart LR
-  WA[WhatsApp] --> N[Normalise lead]
+  WA[WhatsApp] --> N[Lead from each channel]
   WF[Web form] --> N
   WH[Webhook] --> N
   N --> AI[AI reads the request<br/>car, jobs, safety, confidence]
@@ -44,10 +44,10 @@ flowchart LR
   D --> W[04 Weekly report]
 ```
 
-- n8n runs everything: triggers, forms, human-in-the-loop, schedules and error handling.
+- n8n runs everything: triggers, forms, human-in-the-loop, schedules and error handling. Every step is a standard n8n node except one: the pricing rules live in a single Code node, on purpose ([decision 0008](docs/decisions/0008-n8n-nodes-except-pricing-and-report.md)).
 - Claude (Anthropic) only reads and structures the customer's message. It never sets a price.
 - n8n Data Tables hold settings, the price book, leads and an event log, all editable without opening a workflow.
-- WhatsApp Cloud API reaches customers and is the owner's console too. Email (SMTP) reaches web-form customers.
+- WhatsApp Cloud API reaches customers and is the owner's console too. Gmail reaches web-form customers.
 
 ### The confidence gate
 

@@ -362,19 +362,6 @@
     },
     {
       "parameters": {
-        "jsCode": "// Starting values, saved only if the settings table is still empty.\n// Edit them later in the garage_settings data table, not here.\nif ($input.first().json.garage_name) return [];\nreturn [{ json: {\n  garage_name: 'Demo Garage',\n  garage_phone: '[your phone number]',\n  labour_rate_eur: 40,\n  vat_rate: 24,\n  confidence_threshold: 0.75,\n  premium_brands: 'BMW,Mercedes,Audi,Porsche,Lexus,Volvo,Land Rover,Jaguar,Mini',\n  premium_multiplier: 1.25,\n  owner_whatsapp_number: '[owner mobile in international format, e.g. +30...]',\n  from_email: '[the email address quotes are sent from]',\n  booking_form_url: '[paste the Production URL of the Booking form]',\n  whatsapp_phone_number_id: '[your WhatsApp phone number ID]',\n  followup_hours: 20,\n  final_followup_days: 3,\n} }];"
-      },
-      "id": "6cc1b9d1-8e52-fd77-dac0-e2a0d1a278fd",
-      "name": "Default settings (if none yet)",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1320,
-        -120
-      ]
-    },
-    {
-      "parameters": {
         "resource": "row",
         "operation": "insert",
         "dataTableId": {
@@ -395,23 +382,9 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        1540,
+        1760,
         -120
       ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// SAMPLE price book for the demo. These are illustrative numbers, not market prices.\n// After setup, edit them in the garage_price_book data table.\nconst rows = [\n  ['oil_service', 'Oil and filter service', 'oil change, service, λάδια, σέρβις', 0.8, 45, 90, true],\n  ['brake_pads_front', 'Front brake pads', 'front pads, τακάκια εμπρός', 1.0, 40, 120, true],\n  ['brake_pads_rear', 'Rear brake pads', 'rear pads, τακάκια πίσω', 1.0, 35, 110, true],\n  ['brake_discs_pads_front', 'Front brake discs and pads', 'discs, rotors, δισκόπλακες', 1.5, 120, 300, true],\n  ['battery', 'Battery replacement', 'battery, won\\'t start, μπαταρία', 0.3, 80, 180, true],\n  ['ac_recharge', 'Air-con recharge', 'A/C, aircon, κλιματισμός, air condition', 0.8, 30, 60, true],\n  ['spark_plugs', 'Spark plugs', 'plugs, μπουζί', 0.8, 30, 90, true],\n  ['tyre_fit_balance', 'Fit and balance 4 tyres (tyres not included)', 'tyres, tires, λάστιχα, ελαστικά, balancing', 0.8, 0, 0, true],\n  ['diagnostic_scan', 'Diagnostic scan', 'check engine, warning light, diagnosis, διάγνωση', 0.5, 0, 0, true],\n  ['inspection_prep', 'Pre-inspection check (KTEO)', 'KTEO, ΚΤΕΟ, MOT, inspection', 1.0, 0, 0, true],\n  ['timing_belt', 'Timing belt kit and water pump', 'timing belt, cambelt, ιμάντας χρονισμού', 3.5, 150, 400, false],\n  ['clutch', 'Clutch replacement', 'clutch, συμπλέκτης', 5.0, 250, 600, false],\n];\nreturn rows.map(([job_code, name, keywords, labour_hours, parts_low_eur, parts_high_eur, auto_quote]) => ({ json: {\n  job_code, name, keywords, labour_hours, parts_low_eur, parts_high_eur, auto_quote,\n  notes: 'SAMPLE value – replace with your own',\n} }));"
-      },
-      "id": "5423063c-8cac-2858-2e4b-580b7223249e",
-      "name": "Sample price book",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1100,
-        120
-      ],
-      "executeOnce": true
     },
     {
       "parameters": {
@@ -438,7 +411,7 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        1320,
+        1540,
         120
       ]
     },
@@ -464,9 +437,170 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        1540,
+        1760,
         120
       ]
+    },
+    {
+      "name": "No settings yet?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1320,
+        -120
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ns1",
+              "leftValue": "={{ $json.garage_name ?? '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "8a29cb97-2513-412c-99f1-758e81d029c4"
+    },
+    {
+      "name": "Default settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1540,
+        -120
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d1",
+              "name": "garage_name",
+              "value": "Demo Garage",
+              "type": "string"
+            },
+            {
+              "id": "d2",
+              "name": "garage_phone",
+              "value": "[your phone number]",
+              "type": "string"
+            },
+            {
+              "id": "d3",
+              "name": "labour_rate_eur",
+              "value": 40,
+              "type": "number"
+            },
+            {
+              "id": "d4",
+              "name": "vat_rate",
+              "value": 24,
+              "type": "number"
+            },
+            {
+              "id": "d5",
+              "name": "confidence_threshold",
+              "value": 0.75,
+              "type": "number"
+            },
+            {
+              "id": "d6",
+              "name": "premium_brands",
+              "value": "BMW,Mercedes,Audi,Porsche,Lexus,Volvo,Land Rover,Jaguar,Mini",
+              "type": "string"
+            },
+            {
+              "id": "d7",
+              "name": "premium_multiplier",
+              "value": 1.25,
+              "type": "number"
+            },
+            {
+              "id": "d8",
+              "name": "owner_whatsapp_number",
+              "value": "[owner mobile in international format, e.g. +30...]",
+              "type": "string"
+            },
+            {
+              "id": "d9",
+              "name": "from_email",
+              "value": "[the Gmail address quotes are sent from]",
+              "type": "string"
+            },
+            {
+              "id": "d10",
+              "name": "booking_form_url",
+              "value": "[paste the Production URL of the Booking form]",
+              "type": "string"
+            },
+            {
+              "id": "d11",
+              "name": "whatsapp_phone_number_id",
+              "value": "[your WhatsApp phone number ID]",
+              "type": "string"
+            },
+            {
+              "id": "d12",
+              "name": "followup_hours",
+              "value": 20,
+              "type": "number"
+            },
+            {
+              "id": "d13",
+              "name": "final_followup_days",
+              "value": 3,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fc72e240-5087-4ae8-b3a6-1b6a2a32ee05"
+    },
+    {
+      "name": "Sample price book",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1100,
+        120
+      ],
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"jobs\": [\n    {\n      \"job_code\": \"oil_service\",\n      \"name\": \"Oil and filter service\",\n      \"keywords\": \"oil change, service, λάδια, σέρβις\",\n      \"labour_hours\": 0.8,\n      \"parts_low_eur\": 45,\n      \"parts_high_eur\": 90,\n      \"auto_quote\": true,\n      \"notes\": \"SAMPLE value – replace with your own\"\n    },\n    {\n      \"job_code\": \"brake_pads_front\",\n      \"name\": \"Front brake pads\",\n      \"keywords\": \"front pads, τακάκια εμπρός\",\n      \"labour_hours\": 1.0,\n      \"parts_low_eur\": 40,\n      \"parts_high_eur\": 120,\n      \"auto_quote\": true,\n      \"notes\": \"SAMPLE value – replace with your own\"\n    },\n    {\n      \"job_code\": \"brake_pads_rear\",\n      \"name\": \"Rear brake pads\",\n      \"keywords\": \"rear pads, τακάκια πίσω\",\n      \"labour_hours\": 1.0,\n      \"parts_low_eur\": 35,\n      \"parts_high_eur\": 110,\n      \"auto_quote\": true,\n      \"notes\": \"SAMPLE value – replace with your own\"\n    },\n    {\n      \"job_code\": \"brake_discs_pads_front\",\n      \"name\": \"Front brake discs and pads\",\n      \"keywords\": \"discs, rotors, δισκόπλακες\",\n      \"labour_hours\": 1.5,\n      \"parts_low_eur\": 120,\n      \"parts_high_eur\": 300,\n      \"auto_quote\": true,\n      \"notes\": \"SAMPLE value – replace with your own\"\n    },\n    {\n      \"job_code\": \"battery\",\n      \"name\": \"Battery replacement\",\n      \"keywords\": \"battery, won't start, μπαταρία\",\n      \"labour_hours\": 0.3,\n      \"parts_low_eur\": 80,\n      \"parts_high_eur\": 180,\n      \"auto_quote\": true,\n      \"notes\": \"SAMPLE value – replace with your own\"\n    },\n    {\n      \"job_code\": \"ac_recharge\",\n      \"name\": \"Air-con recharge\",\n      \"keywords\": \"A/C, aircon, κλιματισμός, air condition\",\n      \"labour_hours\": 0.8,\n      \"parts_low_eur\": 30,\n      \"parts_high_eur\": 60,\n      \"auto_quote\": true,\n      \"notes\": \"SAMPLE value – replace with your own\"\n    },\n    {\n      \"job_code\": \"spark_plugs\",\n      \"name\": \"Spark plugs\",\n      \"keywords\": \"plugs, μπουζί\",\n      \"labour_hours\": 0.8,\n      \"parts_low_eur\": 30,\n      \"parts_high_eur\": 90,\n      \"auto_quote\": true,\n      \"notes\": \"SAMPLE value – replace with your own\"\n    },\n    {\n      \"job_code\": \"tyre_fit_balance\",\n      \"name\": \"Fit and balance 4 tyres (tyres not included)\",\n      \"keywords\": \"tyres, tires, λάστιχα, ελαστικά, balancing\",\n      \"labour_hours\": 0.8,\n      \"parts_low_eur\": 0,\n      \"parts_high_eur\": 0,\n      \"auto_quote\": true,\n      \"notes\": \"SAMPLE value – replace with your own\"\n    },\n    {\n      \"job_code\": \"diagnostic_scan\",\n      \"name\": \"Diagnostic scan\",\n      \"keywords\": \"check engine, warning light, diagnosis, διάγνωση\",\n      \"labour_hours\": 0.5,\n      \"parts_low_eur\": 0,\n      \"parts_high_eur\": 0,\n      \"auto_quote\": true,\n      \"notes\": \"SAMPLE value – replace with your own\"\n    },\n    {\n      \"job_code\": \"inspection_prep\",\n      \"name\": \"Pre-inspection check (KTEO)\",\n      \"keywords\": \"KTEO, ΚΤΕΟ, MOT, inspection\",\n      \"labour_hours\": 1.0,\n      \"parts_low_eur\": 0,\n      \"parts_high_eur\": 0,\n      \"auto_quote\": true,\n      \"notes\": \"SAMPLE value – replace with your own\"\n    },\n    {\n      \"job_code\": \"timing_belt\",\n      \"name\": \"Timing belt kit and water pump\",\n      \"keywords\": \"timing belt, cambelt, ιμάντας χρονισμού\",\n      \"labour_hours\": 3.5,\n      \"parts_low_eur\": 150,\n      \"parts_high_eur\": 400,\n      \"auto_quote\": false,\n      \"notes\": \"SAMPLE value – replace with your own\"\n    },\n    {\n      \"job_code\": \"clutch\",\n      \"name\": \"Clutch replacement\",\n      \"keywords\": \"clutch, συμπλέκτης\",\n      \"labour_hours\": 5.0,\n      \"parts_low_eur\": 250,\n      \"parts_high_eur\": 600,\n      \"auto_quote\": false,\n      \"notes\": \"SAMPLE value – replace with your own\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "executeOnce": true,
+      "id": "b794d5b7-63dc-42bf-84c5-a7581c1e4e27"
+    },
+    {
+      "name": "One row per job",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1320,
+        120
+      ],
+      "parameters": {
+        "fieldToSplitOut": "jobs",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "9ffdf24a-9435-4801-b2e4-ded1f1987af2"
     }
   ],
   "connections": {
@@ -534,14 +668,36 @@
       "main": [
         [
           {
-            "node": "Default settings (if none yet)",
+            "node": "No settings yet?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Default settings (if none yet)": {
+    "Job not saved yet?": {
+      "main": [
+        [
+          {
+            "node": "Save price book",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No settings yet?": {
+      "main": [
+        [
+          {
+            "node": "Default settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default settings": {
       "main": [
         [
           {
@@ -556,18 +712,18 @@
       "main": [
         [
           {
-            "node": "Job not saved yet?",
+            "node": "One row per job",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Job not saved yet?": {
+    "One row per job": {
       "main": [
         [
           {
-            "node": "Save price book",
+            "node": "Job not saved yet?",
             "type": "main",
             "index": 0
           }

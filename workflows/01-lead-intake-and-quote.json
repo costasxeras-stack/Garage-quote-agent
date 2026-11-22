@@ -157,19 +157,6 @@
     },
     {
       "parameters": {
-        "jsCode": "// Turns a web form, WhatsApp or webhook message into one standard lead.\nconst leads = [];\nconst now = new Date().toISOString();\nconst clean = (v) => (v === undefined || v === null ? '' : String(v).trim());\n\nfor (const item of $input.all()) {\n  const j = item.json;\n\n  // 1) WhatsApp Cloud API event (from the WhatsApp Trigger)\n  if (Array.isArray(j.messages)) {\n    const names = Object.fromEntries((j.contacts || []).map(c => [c.wa_id, c.profile?.name || '']));\n    for (const m of j.messages) {\n      if (m.type !== 'text') continue; // v0.1 reads text only; photos and voice notes go to the owner later\n      leads.push({\n        channel: 'whatsapp',\n        customer_name: clean(names[m.from]),\n        customer_email: '',\n        customer_phone: '+' + clean(m.from),\n        followup_consent: false,\n        car_text: '',\n        request_text: clean(m.text?.body),\n        received_at: m.timestamp ? new Date(Number(m.timestamp) * 1000).toISOString() : now,\n      });\n    }\n    continue;\n  }\n\n  // 2) n8n web form\n  if (j.formMode !== undefined || j.submittedAt !== undefined) {\n    leads.push({\n      channel: 'web_form',\n      customer_name: clean(j.name),\n      customer_email: clean(j.email).toLowerCase(),\n      customer_phone: clean(j.phone),\n      followup_consent: (() => { let c = j.consent; if (typeof c === 'string' && c.startsWith('[')) { try { c = JSON.parse(c); } catch (e) {} } return Array.isArray(c) ? c.length > 0 : !!c; })(),\n      car_text: clean(j.car),\n      request_text: clean(j.request),\n      received_at: now,\n    });\n    continue;\n  }\n\n  // 3) Generic webhook (website widget, email parser, other tools)\n  const b = j.body || j;\n  leads.push({\n    channel: clean(b.channel) || 'webhook',\n    customer_name: clean(b.name),\n    customer_email: clean(b.email).toLowerCase(),\n    customer_phone: clean(b.phone),\n    followup_consent: b.consent === true || b.consent === 'true',\n    car_text: clean(b.car),\n    request_text: clean(b.request || b.message),\n    received_at: now,\n  });\n}\n\nreturn leads.filter(l => l.request_text).map(json => ({ json }));"
-      },
-      "id": "f000c7d3-cb9c-50e9-f0a3-217f6fb4b411",
-      "name": "Normalise lead",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -320,
-        0
-      ]
-    },
-    {
-      "parameters": {
         "resource": "row",
         "operation": "get",
         "dataTableId": {
@@ -186,7 +173,7 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        -100,
+        760,
         0
       ],
       "executeOnce": true,
@@ -210,24 +197,11 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        120,
+        980,
         0
       ],
       "executeOnce": true,
       "alwaysOutputData": true
-    },
-    {
-      "parameters": {
-        "jsCode": "// Gives the AI the customer's words plus the garage's list of priced jobs.\n// Messages from the owner's own number (e.g. the daily \"hi\" that keeps WhatsApp's 24-hour window open) are not leads.\nconst digits = (v) => String(v || '').replace(/\\D/g, '');\nconst owner = digits($('Load settings').first().json.owner_whatsapp_number);\nconst jobs = $('Load price book').all().map(i => i.json).filter(r => r.job_code);\nconst jobList = jobs.map(r => '- ' + r.job_code + ': ' + r.name + (r.keywords ? ' (also: ' + r.keywords + ')' : '')).join('\\n');\n\nreturn $('Normalise lead').all().filter(item => !(owner && item.json.channel === 'whatsapp' && digits(item.json.customer_phone) === owner)).map(item => ({\n  json: {\n    ...item.json,\n    ai_text: 'PRICE LIST JOB CODES:\\n' + jobList +\n      '\\n\\nCAR (as typed by the customer, may be empty): ' + (item.json.car_text || '-') +\n      '\\n\\nCUSTOMER MESSAGE:\\n' + item.json.request_text,\n  },\n}));"
-      },
-      "id": "ec01dcc8-8c0f-feae-a0eb-7727dac0eeeb",
-      "name": "Build AI request",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        340,
-        0
-      ]
     },
     {
       "parameters": {
@@ -243,8 +217,8 @@
       "type": "@n8n/n8n-nodes-langchain.informationExtractor",
       "typeVersion": 1.2,
       "position": [
-        560,
-        0
+        1860,
+        -80
       ],
       "onError": "continueRegularOutput"
     },
@@ -265,8 +239,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
       "typeVersion": 1.6,
       "position": [
-        560,
-        200
+        1860,
+        120
       ]
     },
     {
@@ -278,8 +252,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        800,
-        0
+        2100,
+        -80
       ]
     },
     {
@@ -642,8 +616,8 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        1020,
-        0
+        2320,
+        -80
       ]
     },
     {
@@ -705,8 +679,8 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        1240,
-        180
+        2540,
+        100
       ]
     },
     {
@@ -738,8 +712,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1240,
-        0
+        2540,
+        -80
       ]
     },
     {
@@ -770,23 +744,10 @@
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
-        1500,
+        2780,
         160
       ],
       "webhookId": "b1d3c0de-0001-4a00-9000-000000000004"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Turns the owner's answer (or no answer) into the customer message and new status.\nconst s = $('Load settings').first().json;\nconst eur = (x) => '€' + Number(x).toLocaleString('en-GB');\n\nreturn $input.all().map((item, i) => {\n  const lead = $('Price & route').itemMatching(i).json;\n  // The response form returns answers keyed by field label.\n  const r = item.json.data || {};\n  const decision = String(r['Decision'] || '');\n  const first = (lead.customer_name || '').split(' ')[0];\n  const hi = 'Hi' + (first ? ' ' + first : '') + ',';\n  const note = String(r['Note to the customer'] || '').trim();\n  const low = Number(r['Your price from (€ incl. VAT)']) || Number(lead.quote_low) || 0;\n  const high = Number(r['Your price to (€ incl. VAT)']) || Number(lead.quote_high) || 0;\n  const car = [lead.car_make, lead.car_model, lead.car_year || ''].filter(Boolean).join(' ');\n\n  let status, text, ownerFyi = '';\n  if (decision.startsWith('Send estimate')) {\n    status = 'quoted';\n    const useOwner = decision.includes('my price');\n    text = [hi, '',\n      'Thanks for contacting ' + s.garage_name + '. Here is our estimate' + (car ? ' for your ' + car : '') + ':', '',\n      ...(useOwner ? [] : String(lead.quote_lines || '').split('\\n').filter(Boolean).map(l => '• ' + l)),\n      'Estimated total: ' + eur(low) + ' – ' + eur(high) + ' (incl. ' + s.vat_rate + '% VAT).',\n      ...(note ? ['', note] : []),\n      '', 'The final price is confirmed after we inspect the car. We will always ask you before doing any extra work.',\n      '', 'Book a time here: ' + lead.booking_link, 'Or call us on ' + s.garage_phone + '.', '', s.garage_name].join('\\n');\n  } else if (decision.startsWith('I will call')) {\n    status = 'needs_call';\n    text = [hi, '', 'Thanks for contacting ' + s.garage_name + '. We would like to ask you a couple of questions to give you an accurate price, so we will call you shortly' + (lead.customer_phone ? ' on ' + lead.customer_phone : '') + '.', ...(note ? ['', note] : []), '', s.garage_name].join('\\n');\n  } else if (decision.startsWith('Decline')) {\n    status = 'declined';\n    text = [hi, '', 'Thanks for contacting ' + s.garage_name + '. Unfortunately we cannot take on this job.', ...(note ? ['', note] : []), '', s.garage_name].join('\\n');\n  } else {\n    // No answer in time: the customer still hears from us, and the owner gets a nudge.\n    status = 'needs_call';\n    text = [hi, '', 'Thanks for contacting ' + s.garage_name + '. A mechanic needs to look at your request, so we will get back to you personally' + (lead.customer_phone ? ' by phone (' + lead.customer_phone + ')' : '') + ' as soon as possible.', '', s.garage_name].join('\\n');\n    ownerFyi = 'No decision within the time limit, so the customer got a holding message. Please call them: ' + (lead.customer_name || '') + ' ' + (lead.customer_phone || lead.customer_email || '') + ' (lead ' + lead.lead_id + ').';\n  }\n\n  return { json: {\n    ...lead,\n    status,\n    quote_low: status === 'quoted' ? low : lead.quote_low,\n    quote_high: status === 'quoted' ? high : lead.quote_high,\n    owner_decision: decision || 'no answer (timed out)',\n    owner_note: note,\n    reply_text: text,\n    owner_fyi: ownerFyi,\n  } };\n});"
-      },
-      "id": "e26c60b0-b7e9-8295-6610-91d18ff7ac0c",
-      "name": "Apply owner decision",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1740,
-        160
-      ]
     },
     {
       "parameters": {
@@ -847,21 +808,8 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        1980,
-        340
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Decides how the reply goes out and when the first follow-up is due.\nconst s = $('Load settings').first().json;\nreturn $input.all().map((item, idx) => {\n  const j = { ...$('Price & route').itemMatching(idx).json, ...item.json };\n  const via = j.channel === 'whatsapp' ? 'whatsapp' : (j.customer_email ? 'email' : 'none');\n  // WhatsApp: one reminder inside the 24-hour customer service window, timed from the customer's message.\n  // Email: reminders only with consent.\n  let next = null;\n  if (j.status === 'quoted') {\n    const h = Number(s.followup_hours) || 20;\n    if (via === 'whatsapp') next = new Date(new Date(j.received_at).getTime() + Math.min(h, 23) * 3600e3).toISOString();\n    else if (via === 'email' && j.followup_consent) next = new Date(Date.now() + h * 3600e3).toISOString();\n  }\n  const fyi = j.owner_fyi !== undefined ? j.owner_fyi : (j.route === 'auto'\n    ? 'Estimate sent automatically to ' + (j.customer_name || 'a customer') + ' via ' + via + ': ' + [j.car_make, j.car_model].filter(Boolean).join(' ') + ', €' + j.quote_low + ' – €' + j.quote_high + ' (lead ' + j.lead_id + ').'\n    : '');\n  return { json: { ...j, reply_via: via, next_followup_at: next, owner_fyi: fyi } };\n});"
-      },
-      "id": "9cafdf65-9730-445a-f41f-8df08f1b9de8",
-      "name": "Prepare reply",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1980,
-        0
+        3700,
+        480
       ]
     },
     {
@@ -928,8 +876,8 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        2200,
-        0
+        3920,
+        -80
       ]
     },
     {
@@ -945,29 +893,8 @@
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
-        2440,
-        -160
-      ],
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "fromEmail": "={{ $('Load settings').first().json.garage_name }} <{{ $('Load settings').first().json.from_email }}>",
-        "toEmail": "={{ $json.customer_email }}",
-        "subject": "={{ $json.reply_subject }}",
-        "emailFormat": "text",
-        "text": "={{ $json.reply_text }}",
-        "options": {
-          "appendAttribution": false
-        }
-      },
-      "id": "7cb9e57c-ac56-186d-2c0f-54d062a8c843",
-      "name": "Reply by email",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
-      "position": [
-        2440,
-        0
+        4160,
+        -240
       ],
       "onError": "continueRegularOutput"
     },
@@ -1001,7 +928,7 @@
             "last_message": "={{ $('Prepare reply').item.json.reply_text }}",
             "first_reply_at": "={{ $now.toISO() }}",
             "response_minutes": "={{ Math.round(($now.toMillis() - new Date($('Prepare reply').item.json.received_at).getTime()) / 60000) }}",
-            "next_followup_at": "={{ $('Prepare reply').item.json.next_followup_at }}"
+            "next_followup_at": "={{ $('Prepare reply').item.json.next_followup_at || null }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -1326,8 +1253,8 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        2680,
-        0
+        4400,
+        -80
       ]
     },
     {
@@ -1360,8 +1287,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        2900,
-        0
+        4620,
+        -80
       ]
     },
     {
@@ -1377,10 +1304,779 @@
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
-        3120,
-        -20
+        4840,
+        -100
       ],
       "onError": "continueRegularOutput"
+    },
+    {
+      "name": "Customer message?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -340,
+        -160
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cm1",
+              "leftValue": "={{ ($json.messages ?? []).length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c6da1018-17a8-4756-9279-7f2364ce9a2d"
+    },
+    {
+      "name": "One item per message",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -120,
+        -160
+      ],
+      "parameters": {
+        "fieldToSplitOut": "messages",
+        "include": "noOtherFields",
+        "options": {}
+      },
+      "id": "79f38455-4b0e-40de-91a9-b00162be87b6"
+    },
+    {
+      "name": "Text only",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        100,
+        -160
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "to1",
+              "leftValue": "={{ $json.type }}",
+              "rightValue": "text",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d371719d-4f19-4218-a107-5d42d38044d1"
+    },
+    {
+      "name": "Lead from WhatsApp",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        320,
+        -160
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "w1",
+              "name": "channel",
+              "value": "whatsapp",
+              "type": "string"
+            },
+            {
+              "id": "w2",
+              "name": "customer_name",
+              "value": "={{ ($('WhatsApp message').item.json.contacts ?? []).find(c => c.wa_id === $json.from)?.profile?.name ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "w3",
+              "name": "customer_email",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "w4",
+              "name": "customer_phone",
+              "value": "=+{{ String($json.from ?? '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "w5",
+              "name": "followup_consent",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "w6",
+              "name": "car_text",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "w7",
+              "name": "request_text",
+              "value": "={{ String($json.text?.body ?? '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "w8",
+              "name": "received_at",
+              "value": "={{ $json.timestamp ? DateTime.fromSeconds(Number($json.timestamp)).toUTC().toISO() : $now.toUTC().toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fa5fcc77-9a34-4e51-bfd3-a28644e7c1ae"
+    },
+    {
+      "name": "Lead from web form",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        320,
+        0
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "channel",
+              "value": "web_form",
+              "type": "string"
+            },
+            {
+              "id": "f2",
+              "name": "customer_name",
+              "value": "={{ String($json.name ?? '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "f3",
+              "name": "customer_email",
+              "value": "={{ String($json.email ?? '').trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "f4",
+              "name": "customer_phone",
+              "value": "={{ String($json.phone ?? '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "f5",
+              "name": "followup_consent",
+              "value": "={{ Array.isArray($json.consent) ? $json.consent.length > 0 : !['', '[]', 'false'].includes(String($json.consent ?? '').trim()) }}",
+              "type": "boolean"
+            },
+            {
+              "id": "f6",
+              "name": "car_text",
+              "value": "={{ String($json.car ?? '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "f7",
+              "name": "request_text",
+              "value": "={{ String($json.request ?? '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "f8",
+              "name": "received_at",
+              "value": "={{ $now.toUTC().toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "17e21207-dd19-488a-bad1-57248b897c57"
+    },
+    {
+      "name": "Lead from webhook",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        320,
+        160
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "h1",
+              "name": "channel",
+              "value": "={{ String(($json.body ?? $json).channel ?? '').trim() || 'webhook' }}",
+              "type": "string"
+            },
+            {
+              "id": "h2",
+              "name": "customer_name",
+              "value": "={{ String(($json.body ?? $json).name ?? '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "h3",
+              "name": "customer_email",
+              "value": "={{ String(($json.body ?? $json).email ?? '').trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "h4",
+              "name": "customer_phone",
+              "value": "={{ String(($json.body ?? $json).phone ?? '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "h5",
+              "name": "followup_consent",
+              "value": "={{ ($json.body ?? $json).consent === true || ($json.body ?? $json).consent === 'true' }}",
+              "type": "boolean"
+            },
+            {
+              "id": "h6",
+              "name": "car_text",
+              "value": "={{ String(($json.body ?? $json).car ?? '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "h7",
+              "name": "request_text",
+              "value": "={{ String(($json.body ?? $json).request || ($json.body ?? $json).message || '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "h8",
+              "name": "received_at",
+              "value": "={{ $now.toUTC().toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2c2a0edd-8ec8-486d-940b-f9bbb83b6981"
+    },
+    {
+      "name": "Has a message?",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        540,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "hm1",
+              "leftValue": "={{ $json.request_text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ecfff2b7-3e73-4133-8aaa-7ed3a26c70fe"
+    },
+    {
+      "name": "Leads, once the price book is loaded",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1200,
+        -80
+      ],
+      "parameters": {
+        "mode": "chooseBranch",
+        "chooseBranchMode": "waitForAll",
+        "output": "specifiedInput",
+        "useDataOfInput": "1"
+      },
+      "id": "8eaa6bdb-346d-4015-a6b8-e44191ba103e"
+    },
+    {
+      "name": "Not the owner's own number",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        1420,
+        -80
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "on1",
+              "leftValue": "={{ $json.channel }}",
+              "rightValue": "whatsapp",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            },
+            {
+              "id": "on2",
+              "leftValue": "={{ String($json.customer_phone ?? '').replace(/\\D/g, '') }}",
+              "rightValue": "={{ String($('Load settings').first().json.owner_whatsapp_number ?? '').replace(/\\D/g, '') || 'no owner number' }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "35e6f1a4-3d55-4dbc-bba5-97634e48c941"
+    },
+    {
+      "name": "Build AI request",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1640,
+        -80
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ai1",
+              "name": "ai_text",
+              "value": "=PRICE LIST JOB CODES:\n{{ $('Load price book').all().map(i => i.json).filter(r => r.job_code).map(r => '- ' + r.job_code + ': ' + r.name + (r.keywords ? ' (also: ' + r.keywords + ')' : '')).join('\\n') }}\n\nCAR (as typed by the customer, may be empty): {{ $json.car_text || '-' }}\n\nCUSTOMER MESSAGE:\n{{ $json.request_text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {},
+        "includeOtherFields": true,
+        "include": "all"
+      },
+      "id": "8947a550-e725-4c38-a5d6-154cff055d46"
+    },
+    {
+      "name": "Lead + owner's answer",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3000,
+        160
+      ],
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ { ...$('Price & route').item.json, decision: String($json.data?.['Decision'] ?? ''), owner_note: String($json.data?.['Note to the customer'] ?? '').trim(), owner_low: Number($json.data?.['Your price from (€ incl. VAT)']) || Number($('Price & route').item.json.quote_low) || 0, owner_high: Number($json.data?.['Your price to (€ incl. VAT)']) || Number($('Price & route').item.json.quote_high) || 0, greeting: 'Hi' + (String($('Price & route').item.json.customer_name || '').split(' ')[0] ? ' ' + String($('Price & route').item.json.customer_name).split(' ')[0] : '') + ',', car: [$('Price & route').item.json.car_make, $('Price & route').item.json.car_model, $('Price & route').item.json.car_year || ''].filter(Boolean).join(' '), garage_name: $('Load settings').first().json.garage_name, garage_phone: $('Load settings').first().json.garage_phone, vat_rate: $('Load settings').first().json.vat_rate } }}",
+        "options": {}
+      },
+      "id": "3362da44-cf04-4337-a166-e0d0118c0f8e"
+    },
+    {
+      "name": "Owner's answer",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        3220,
+        160
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "oa1",
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "Send estimate",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Send estimate"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "oa2",
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "I will call",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "I will call"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "oa3",
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "Decline",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Decline"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "No answer in time"
+        }
+      },
+      "id": "6cd4a617-c8f5-4c07-88df-0c57efec16cc"
+    },
+    {
+      "name": "Send the estimate",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3460,
+        0
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "se1",
+              "name": "status",
+              "value": "quoted",
+              "type": "string"
+            },
+            {
+              "id": "se2",
+              "name": "quote_low",
+              "value": "={{ $json.owner_low }}",
+              "type": "number"
+            },
+            {
+              "id": "se3",
+              "name": "quote_high",
+              "value": "={{ $json.owner_high }}",
+              "type": "number"
+            },
+            {
+              "id": "se4",
+              "name": "owner_decision",
+              "value": "={{ $json.decision }}",
+              "type": "string"
+            },
+            {
+              "id": "se5",
+              "name": "reply_text",
+              "value": "={{ $json.greeting }}\n\nThanks for contacting {{ $json.garage_name }}. Here is our estimate{{ $json.car ? ' for your ' + $json.car : '' }}:\n\n{{ $json.decision.includes('my price') ? '' : String($json.quote_lines || '').split('\\n').filter(Boolean).map(l => '• ' + l).join('\\n') + '\\n' }}Estimated total: €{{ Number($json.owner_low).toLocaleString('en-GB') }} – €{{ Number($json.owner_high).toLocaleString('en-GB') }} (incl. {{ $json.vat_rate }}% VAT).{{ $json.owner_note ? '\\n\\n' + $json.owner_note : '' }}\n\nThe final price is confirmed after we inspect the car. We will always ask you before doing any extra work.\n\nBook a time here: {{ $json.booking_link }}\nOr call us on {{ $json.garage_phone }}.\n\n{{ $json.garage_name }}",
+              "type": "string"
+            },
+            {
+              "id": "se6",
+              "name": "owner_fyi",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {},
+        "includeOtherFields": true,
+        "include": "all"
+      },
+      "id": "17fb16f1-9db2-4960-8022-a584b10e5b93"
+    },
+    {
+      "name": "We will call you",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3460,
+        160
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "wc1",
+              "name": "status",
+              "value": "needs_call",
+              "type": "string"
+            },
+            {
+              "id": "wc2",
+              "name": "owner_decision",
+              "value": "={{ $json.decision }}",
+              "type": "string"
+            },
+            {
+              "id": "wc3",
+              "name": "reply_text",
+              "value": "={{ $json.greeting }}\n\nThanks for contacting {{ $json.garage_name }}. We would like to ask you a couple of questions to give you an accurate price, so we will call you shortly{{ $json.customer_phone ? ' on ' + $json.customer_phone : '' }}.{{ $json.owner_note ? '\\n\\n' + $json.owner_note : '' }}\n\n{{ $json.garage_name }}",
+              "type": "string"
+            },
+            {
+              "id": "wc4",
+              "name": "owner_fyi",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {},
+        "includeOtherFields": true,
+        "include": "all"
+      },
+      "id": "49e24bbd-3c1b-42b5-b0d0-484f2ac93606"
+    },
+    {
+      "name": "Decline politely",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3460,
+        320
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dp1",
+              "name": "status",
+              "value": "declined",
+              "type": "string"
+            },
+            {
+              "id": "dp2",
+              "name": "owner_decision",
+              "value": "={{ $json.decision }}",
+              "type": "string"
+            },
+            {
+              "id": "dp3",
+              "name": "reply_text",
+              "value": "={{ $json.greeting }}\n\nThanks for contacting {{ $json.garage_name }}. Unfortunately we cannot take on this job.{{ $json.owner_note ? '\\n\\n' + $json.owner_note : '' }}\n\n{{ $json.garage_name }}",
+              "type": "string"
+            },
+            {
+              "id": "dp4",
+              "name": "owner_fyi",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {},
+        "includeOtherFields": true,
+        "include": "all"
+      },
+      "id": "0c11383a-efa1-4142-837c-6e5fec8f75df"
+    },
+    {
+      "name": "Holding message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3460,
+        480
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "hd1",
+              "name": "status",
+              "value": "needs_call",
+              "type": "string"
+            },
+            {
+              "id": "hd2",
+              "name": "owner_decision",
+              "value": "no answer (timed out)",
+              "type": "string"
+            },
+            {
+              "id": "hd3",
+              "name": "reply_text",
+              "value": "={{ $json.greeting }}\n\nThanks for contacting {{ $json.garage_name }}. A mechanic needs to look at your request, so we will get back to you personally{{ $json.customer_phone ? ' by phone (' + $json.customer_phone + ')' : '' }} as soon as possible.\n\n{{ $json.garage_name }}",
+              "type": "string"
+            },
+            {
+              "id": "hd4",
+              "name": "owner_fyi",
+              "value": "=No decision within the time limit, so the customer got a holding message. Please call them: {{ $json.customer_name || '' }} {{ $json.customer_phone || $json.customer_email || '' }} (lead {{ $json.lead_id }}).",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {},
+        "includeOtherFields": true,
+        "include": "all"
+      },
+      "id": "03081a5e-19a8-4113-beb6-7fc961d0c1ea"
+    },
+    {
+      "name": "Full lead",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2780,
+        -160
+      ],
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ $('Price & route').item.json }}",
+        "options": {}
+      },
+      "id": "6d0fea52-56c0-4772-a284-6f8b582fc597"
+    },
+    {
+      "name": "Prepare reply",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3700,
+        -80
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "pr1",
+              "name": "reply_via",
+              "value": "={{ ($json.channel === 'whatsapp' ? 'whatsapp' : ($json.customer_email ? 'email' : 'none')) }}",
+              "type": "string"
+            },
+            {
+              "id": "pr2",
+              "name": "next_followup_at",
+              "value": "={{ $json.status !== 'quoted' ? '' : $json.channel === 'whatsapp' ? DateTime.fromISO($json.received_at).plus({ hours: Math.min((Number($('Load settings').first().json.followup_hours) || 20), 23) }).toUTC().toISO() : ($json.customer_email && $json.followup_consent ? $now.plus({ hours: (Number($('Load settings').first().json.followup_hours) || 20) }).toUTC().toISO() : '') }}",
+              "type": "string"
+            },
+            {
+              "id": "pr3",
+              "name": "owner_fyi",
+              "value": "={{ $json.owner_fyi !== undefined ? $json.owner_fyi : ($json.route === 'auto' ? 'Estimate sent automatically to ' + ($json.customer_name || 'a customer') + ' via ' + ($json.channel === 'whatsapp' ? 'whatsapp' : ($json.customer_email ? 'email' : 'none')) + ': ' + [$json.car_make, $json.car_model].filter(Boolean).join(' ') + ', €' + $json.quote_low + ' – €' + $json.quote_high + ' (lead ' + $json.lead_id + ').' : '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {},
+        "includeOtherFields": true,
+        "include": "all"
+      },
+      "id": "7085aecc-115d-4893-acc3-66b253acf011"
+    },
+    {
+      "name": "Reply by email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        4160,
+        -80
+      ],
+      "webhookId": "5f3a1c22-0b1e-4d6a-9a70-1c2b3d4e5f01",
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.customer_email }}",
+        "subject": "={{ $json.reply_subject }}",
+        "emailType": "text",
+        "message": "={{ $json.reply_text }}",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "={{ $('Load settings').first().json.garage_name }}"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "id": "666028c7-8dad-4716-ae36-af3c77fa3c01"
     }
   ],
   "connections": {
@@ -1399,7 +2095,7 @@
       "main": [
         [
           {
-            "node": "Normalise lead",
+            "node": "Customer message?",
             "type": "main",
             "index": 0
           }
@@ -1410,7 +2106,7 @@
       "main": [
         [
           {
-            "node": "Normalise lead",
+            "node": "Lead from web form",
             "type": "main",
             "index": 0
           }
@@ -1421,18 +2117,7 @@
       "main": [
         [
           {
-            "node": "Normalise lead",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Normalise lead": {
-      "main": [
-        [
-          {
-            "node": "Load settings",
+            "node": "Lead from webhook",
             "type": "main",
             "index": 0
           }
@@ -1454,20 +2139,9 @@
       "main": [
         [
           {
-            "node": "Build AI request",
+            "node": "Leads, once the price book is loaded",
             "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Build AI request": {
-      "main": [
-        [
-          {
-            "node": "AI reads the request",
-            "type": "main",
-            "index": 0
+            "index": 1
           }
         ]
       ]
@@ -1514,7 +2188,7 @@
       "main": [
         [
           {
-            "node": "Prepare reply",
+            "node": "Full lead",
             "type": "main",
             "index": 0
           }
@@ -1532,34 +2206,7 @@
       "main": [
         [
           {
-            "node": "Apply owner decision",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Apply owner decision": {
-      "main": [
-        [
-          {
-            "node": "Prepare reply",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Log owner decision",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare reply": {
-      "main": [
-        [
-          {
-            "node": "Reply channel",
+            "node": "Lead + owner's answer",
             "type": "main",
             "index": 0
           }
@@ -1602,17 +2249,6 @@
         ]
       ]
     },
-    "Reply by email": {
-      "main": [
-        [
-          {
-            "node": "Update lead",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Update lead": {
       "main": [
         [
@@ -1629,6 +2265,261 @@
         [
           {
             "node": "Owner update on WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer message?": {
+      "main": [
+        [
+          {
+            "node": "One item per message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One item per message": {
+      "main": [
+        [
+          {
+            "node": "Text only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text only": {
+      "main": [
+        [
+          {
+            "node": "Lead from WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead from WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Has a message?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead from web form": {
+      "main": [
+        [
+          {
+            "node": "Has a message?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead from webhook": {
+      "main": [
+        [
+          {
+            "node": "Has a message?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has a message?": {
+      "main": [
+        [
+          {
+            "node": "Load settings",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Leads, once the price book is loaded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leads, once the price book is loaded": {
+      "main": [
+        [
+          {
+            "node": "Not the owner's own number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Not the owner's own number": {
+      "main": [
+        [
+          {
+            "node": "Build AI request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build AI request": {
+      "main": [
+        [
+          {
+            "node": "AI reads the request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Full lead": {
+      "main": [
+        [
+          {
+            "node": "Prepare reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead + owner's answer": {
+      "main": [
+        [
+          {
+            "node": "Owner's answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Owner's answer": {
+      "main": [
+        [
+          {
+            "node": "Send the estimate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "We will call you",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Decline politely",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Holding message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send the estimate": {
+      "main": [
+        [
+          {
+            "node": "Prepare reply",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log owner decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "We will call you": {
+      "main": [
+        [
+          {
+            "node": "Prepare reply",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log owner decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decline politely": {
+      "main": [
+        [
+          {
+            "node": "Prepare reply",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log owner decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Holding message": {
+      "main": [
+        [
+          {
+            "node": "Prepare reply",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log owner decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare reply": {
+      "main": [
+        [
+          {
+            "node": "Reply channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reply by email": {
+      "main": [
+        [
+          {
+            "node": "Update lead",
             "type": "main",
             "index": 0
           }

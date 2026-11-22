@@ -99,19 +99,6 @@
     },
     {
       "parameters": {
-        "jsCode": "// Picks the right follow-up for each lead that is due one.\nconst s = $('Load settings').first().json;\nconst out = [];\nfor (const item of $input.all()) {\n  const j = item.json;\n  if (!j.lead_id) continue;\n  const via = j.channel === 'whatsapp' ? 'whatsapp' : (j.customer_email ? 'email' : 'none');\n  const stage = Number(j.followup_stage) || 0;\n  const first = (j.customer_name || '').split(' ')[0];\n  const hi = 'Hi' + (first ? ' ' + first : '') + ',';\n  const car = [j.car_make, j.car_model].filter(Boolean).join(' ');\n  const maxStage = via === 'whatsapp' ? 1 : 2; // after 24h WhatsApp needs approved templates (not in v0.1)\n\n  if (stage >= maxStage || via === 'none') {\n    out.push({ json: { ...j, reply_via: 'none', reply_text: '', new_status: 'lost_no_reply', new_stage: stage, next_followup_at: null } });\n  } else if (stage === 0) {\n    out.push({ json: { ...j, reply_via: via, new_status: 'quoted', new_stage: 1,\n      reply_subject: 'Shall we book your ' + (car || 'car') + ' in?',\n      reply_text: [hi, '', 'Just checking: would you like to book a time for your ' + (car || 'car') + '? Your estimate was €' + j.quote_low + ' – €' + j.quote_high + '.', '', 'Book here: ' + s.booking_form_url + '?lead_id=' + j.lead_id + '&token=' + j.token, 'Or reply with any questions.', '', s.garage_name].join('\\n'),\n      next_followup_at: via === 'email' ? new Date(Date.now() + (Number(s.final_followup_days) || 3) * 86400e3).toISOString() : new Date(Date.now() + 3600e3).toISOString() } });\n  } else {\n    out.push({ json: { ...j, reply_via: via, new_status: 'quoted', new_stage: 2,\n      reply_subject: 'Your estimate from ' + s.garage_name,\n      reply_text: [hi, '', 'Your estimate for the ' + (car || 'car') + ' is still valid. If you would like to book or have questions, just reply or call us on ' + s.garage_phone + '. We will not send more reminders about this request.', '', s.garage_name].join('\\n'),\n      next_followup_at: new Date(Date.now() + 86400e3).toISOString() } });\n  }\n}\nreturn out;"
-      },
-      "id": "14bc106f-7b49-5be7-edb0-683756e5e23a",
-      "name": "Choose follow-up",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        660,
-        0
-      ]
-    },
-    {
-      "parameters": {
         "rules": {
           "values": [
             {
@@ -174,7 +161,7 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        880,
+        1320,
         0
       ]
     },
@@ -191,29 +178,8 @@
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
-        1100,
+        1540,
         -160
-      ],
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "fromEmail": "={{ $('Load settings').first().json.garage_name }} <{{ $('Load settings').first().json.from_email }}>",
-        "toEmail": "={{ $json.customer_email }}",
-        "subject": "={{ $json.reply_subject }}",
-        "emailFormat": "text",
-        "text": "={{ $json.reply_text }}",
-        "options": {
-          "appendAttribution": false
-        }
-      },
-      "id": "f4245bbb-98bb-eb3d-2b79-67320daae9a0",
-      "name": "Remind by email",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
-      "position": [
-        1100,
-        0
       ],
       "onError": "continueRegularOutput"
     },
@@ -241,7 +207,7 @@
           "value": {
             "status": "={{ $('Choose follow-up').item.json.new_status }}",
             "followup_stage": "={{ $('Choose follow-up').item.json.new_stage }}",
-            "next_followup_at": "={{ $('Choose follow-up').item.json.next_followup_at }}",
+            "next_followup_at": "={{ $('Choose follow-up').item.json.next_followup_at || null }}",
             "last_message": "={{ $('Choose follow-up').item.json.reply_text || $('Choose follow-up').item.json.last_message || '' }}"
           },
           "matchingColumns": [],
@@ -567,7 +533,7 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        1340,
+        1780,
         0
       ]
     },
@@ -630,9 +596,173 @@
       "type": "n8n-nodes-base.dataTable",
       "typeVersion": 1.1,
       "position": [
-        1560,
+        2000,
         0
       ]
+    },
+    {
+      "name": "Real leads",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "rl1",
+              "leftValue": "={{ $json.lead_id ?? '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5f390efb-0ba1-4a6b-9a10-a569cb50dbd2"
+    },
+    {
+      "name": "Work out next step",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ws1",
+              "name": "via",
+              "value": "={{ ($json.channel === 'whatsapp' ? 'whatsapp' : ($json.customer_email ? 'email' : 'none')) }}",
+              "type": "string"
+            },
+            {
+              "id": "ws2",
+              "name": "stage",
+              "value": "={{ Number($json.followup_stage) || 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "ws3",
+              "name": "step",
+              "value": "={{ (Number($json.followup_stage) || 0) >= ($json.channel === 'whatsapp' ? 1 : 2) || ($json.channel === 'whatsapp' ? 'whatsapp' : ($json.customer_email ? 'email' : 'none')) === 'none' ? 'give_up' : (Number($json.followup_stage) || 0) === 0 ? 'first_reminder' : 'last_reminder' }}",
+              "type": "string"
+            },
+            {
+              "id": "ws4",
+              "name": "greeting",
+              "value": "={{ 'Hi' + (String($json.customer_name || '').split(' ')[0] ? ' ' + String($json.customer_name || '').split(' ')[0] : '') + ',' }}",
+              "type": "string"
+            },
+            {
+              "id": "ws5",
+              "name": "car",
+              "value": "={{ [$json.car_make, $json.car_model].filter(Boolean).join(' ') || 'car' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {},
+        "includeOtherFields": true,
+        "include": "all"
+      },
+      "id": "b0d3011e-278d-45f5-bab8-f1e199e57fc3"
+    },
+    {
+      "name": "Choose follow-up",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cf1",
+              "name": "reply_via",
+              "value": "={{ $json.step === 'give_up' ? 'none' : $json.via }}",
+              "type": "string"
+            },
+            {
+              "id": "cf2",
+              "name": "new_status",
+              "value": "={{ $json.step === 'give_up' ? 'lost_no_reply' : 'quoted' }}",
+              "type": "string"
+            },
+            {
+              "id": "cf3",
+              "name": "new_stage",
+              "value": "={{ $json.step === 'give_up' ? $json.stage : $json.step === 'first_reminder' ? 1 : 2 }}",
+              "type": "number"
+            },
+            {
+              "id": "cf4",
+              "name": "reply_subject",
+              "value": "={{ $json.step === 'first_reminder' ? 'Shall we book your ' + $json.car + ' in?' : $json.step === 'last_reminder' ? 'Your estimate from ' + $('Load settings').first().json.garage_name : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "cf5",
+              "name": "reply_text",
+              "value": "={{ $json.step === 'first_reminder' ? $json.greeting + '\\n\\nJust checking: would you like to book a time for your ' + $json.car + '? Your estimate was €' + $json.quote_low + ' – €' + $json.quote_high + '.\\n\\nBook here: ' + $('Load settings').first().json.booking_form_url + '?lead_id=' + $json.lead_id + '&token=' + $json.token + '\\nOr reply with any questions.\\n\\n' + $('Load settings').first().json.garage_name : $json.step === 'last_reminder' ? $json.greeting + '\\n\\nYour estimate for the ' + $json.car + ' is still valid. If you would like to book or have questions, just reply or call us on ' + $('Load settings').first().json.garage_phone + '. We will not send more reminders about this request.\\n\\n' + $('Load settings').first().json.garage_name : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "cf6",
+              "name": "next_followup_at",
+              "value": "={{ $json.step === 'give_up' ? '' : $json.step === 'first_reminder' ? ($json.via === 'email' ? $now.plus({ days: Number($('Load settings').first().json.final_followup_days) || 3 }) : $now.plus({ hours: 1 })).toUTC().toISO() : $now.plus({ days: 1 }).toUTC().toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {},
+        "includeOtherFields": true,
+        "include": "all"
+      },
+      "id": "9a344e94-6d2a-4bd7-8725-38b55807df25"
+    },
+    {
+      "name": "Remind by email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1540,
+        0
+      ],
+      "webhookId": "5f3a1c22-0b1e-4d6a-9a70-1c2b3d4e5f03",
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $json.customer_email }}",
+        "subject": "={{ $json.reply_subject }}",
+        "emailType": "text",
+        "message": "={{ $json.reply_text }}",
+        "options": {
+          "appendAttribution": false,
+          "senderName": "={{ $('Load settings').first().json.garage_name }}"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "id": "083aad5d-add0-479b-be36-1acf051fda7d"
     }
   ],
   "connections": {
@@ -662,18 +792,7 @@
       "main": [
         [
           {
-            "node": "Choose follow-up",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Choose follow-up": {
-      "main": [
-        [
-          {
-            "node": "Channel",
+            "node": "Real leads",
             "type": "main",
             "index": 0
           }
@@ -716,22 +835,55 @@
         ]
       ]
     },
-    "Remind by email": {
+    "Update lead": {
       "main": [
         [
           {
-            "node": "Update lead",
+            "node": "Log follow-up",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Update lead": {
+    "Real leads": {
       "main": [
         [
           {
-            "node": "Log follow-up",
+            "node": "Work out next step",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Work out next step": {
+      "main": [
+        [
+          {
+            "node": "Choose follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Choose follow-up": {
+      "main": [
+        [
+          {
+            "node": "Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remind by email": {
+      "main": [
+        [
+          {
+            "node": "Update lead",
             "type": "main",
             "index": 0
           }

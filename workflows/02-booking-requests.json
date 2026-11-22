@@ -143,19 +143,6 @@
     },
     {
       "parameters": {
-        "jsCode": "// Accepts the booking only if the link's token matches the lead.\nconst form = $('Booking form').first().json;\nconst lead = $input.all().map(i => i.json).find(r => r.lead_id) || null;\nconst ok = !!lead && lead.token === String(form.token || '') && ['quoted', 'needs_call', 'awaiting_owner'].includes(lead.status);\nreturn [{ json: {\n  valid: ok,\n  reason: !lead ? 'lead not found' : (ok ? '' : 'token mismatch or lead closed (' + lead.status + ')'),\n  lead_id: lead?.lead_id || String(form.lead_id || ''),\n  customer_name: lead?.customer_name || '',\n  customer_phone: lead?.customer_phone || '',\n  customer_email: lead?.customer_email || '',\n  car: lead ? [lead.car_make, lead.car_model, lead.car_year || ''].filter(Boolean).join(' ') : '',\n  estimate: lead ? '€' + lead.quote_low + ' – €' + lead.quote_high : '',\n  booking_pref: String(form.preferred_date || '').slice(0, 10) + ', ' + (form.preferred_time || '') + (form.note ? ' – ' + form.note : ''),\n} }];"
-      },
-      "id": "6422c3a0-b57a-571a-e3dd-68a869788618",
-      "name": "Check link",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        660,
-        0
-      ]
-    },
-    {
-      "parameters": {
         "conditions": {
           "options": {
             "caseSensitive": true,
@@ -621,6 +608,78 @@
         1100,
         120
       ]
+    },
+    {
+      "name": "Check link",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cl1",
+              "name": "valid",
+              "value": "={{ !!$json.lead_id && $json.token === String($('Booking form').first().json.token ?? '') && ['quoted', 'needs_call', 'awaiting_owner'].includes($json.status) }}",
+              "type": "boolean"
+            },
+            {
+              "id": "cl2",
+              "name": "reason",
+              "value": "={{ !$json.lead_id ? 'lead not found' : ($json.token === String($('Booking form').first().json.token ?? '') && ['quoted', 'needs_call', 'awaiting_owner'].includes($json.status) ? '' : 'token mismatch or lead closed (' + $json.status + ')') }}",
+              "type": "string"
+            },
+            {
+              "id": "cl3",
+              "name": "lead_id",
+              "value": "={{ $json.lead_id || String($('Booking form').first().json.lead_id ?? '') }}",
+              "type": "string"
+            },
+            {
+              "id": "cl4",
+              "name": "customer_name",
+              "value": "={{ $json.customer_name ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "cl5",
+              "name": "customer_phone",
+              "value": "={{ $json.customer_phone ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "cl6",
+              "name": "customer_email",
+              "value": "={{ $json.customer_email ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "cl7",
+              "name": "car",
+              "value": "={{ $json.lead_id ? [$json.car_make, $json.car_model, $json.car_year || ''].filter(Boolean).join(' ') : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "cl8",
+              "name": "estimate",
+              "value": "={{ $json.lead_id ? '€' + $json.quote_low + ' – €' + $json.quote_high : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "cl9",
+              "name": "booking_pref",
+              "value": "={{ String($('Booking form').first().json.preferred_date ?? '').slice(0, 10) + ', ' + ($('Booking form').first().json.preferred_time ?? '') + ($('Booking form').first().json.note ? ' – ' + $('Booking form').first().json.note : '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2b27db7c-002b-4310-b750-02db66d93467"
     }
   ],
   "connections": {
@@ -657,17 +716,6 @@
         ]
       ]
     },
-    "Check link": {
-      "main": [
-        [
-          {
-            "node": "Valid booking?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Valid booking?": {
       "main": [
         [
@@ -691,6 +739,17 @@
         [
           {
             "node": "Tell owner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check link": {
+      "main": [
+        [
+          {
+            "node": "Valid booking?",
             "type": "main",
             "index": 0
           }
