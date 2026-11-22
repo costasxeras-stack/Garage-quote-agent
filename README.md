@@ -4,7 +4,9 @@
 
 Built for independent repair garages in Greece. WhatsApp is the first customer channel. There is also a web form and a generic webhook.
 
-Live demo: [form URL] · Current version: **v0.2.0** ([changelog](CHANGELOG.md))
+Demo video (18 seconds, test run with sample data): [kostasxeras.com/projects/garage-quote-agent.html#demo](https://kostasxeras.com/projects/garage-quote-agent.html#demo) · Current version: **v0.2.0** ([changelog](CHANGELOG.md))
+
+![The owner decision branch in n8n](docs/screenshots/owner-branch.png)
 
 ## Why this exists
 

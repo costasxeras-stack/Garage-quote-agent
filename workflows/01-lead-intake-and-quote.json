@@ -14,7 +14,7 @@
       "typeVersion": 1,
       "position": [
         -560,
-        -420
+        -500
       ]
     },
     {
@@ -29,8 +29,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1340,
-        -420
+        1940,
+        -500
       ]
     },
     {
@@ -45,8 +45,8 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1820,
-        340
+        2700,
+        420
       ]
     },
     {
