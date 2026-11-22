@@ -73,9 +73,9 @@ Step-by-step setup with exact clicks: [docs/setup-guide.md](docs/setup-guide.md)
 - [Testing](docs/testing.md): what was tested and how
 - [Changelog](CHANGELOG.md) · [Versioning](docs/versioning.md)
 
-## How this was built
+## My role
 
-I designed the product: the problem, scope, rules, channels and trade-offs in the decision records. I built it with Claude (Anthropic) as my engineering partner, which generated and tested the workflow files from that design. Every node is standard n8n and can be opened, read and changed in the editor.
+I designed the product: the problem, scope, rules, channels and trade-offs in the decision records. Every node is standard n8n and can be opened, read and changed in the editor.
 
 ## Status and limits
 
