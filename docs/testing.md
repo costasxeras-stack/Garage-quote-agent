@@ -1,3 +1,23 @@
+# Testing: v0.2.0
+
+**How:** workflows 00 to 03 were updated in my n8n Cloud account and run there. Sample data was pinned on the steps that call outside services or data tables (WhatsApp, Claude, Gmail, data table reads and writes). The new n8n steps and the pricing Code node ran for real. Date: 22 November 2026.
+
+## Results: 9 of 9 scenarios passed
+
+| # | Scenario | Expected | Result |
+|---|---|---|---|
+| N1 | Web form, routine job (front brake pads), reminders allowed | Lead cleaned (email lower case), auto-quoted €95 – €210, reply by email, follow-up due in 20 hours, owner FYI written | Pass |
+| N2 | Web form, owner-only job (timing belt), owner sends their own price with a note | Customer message without the calculated lines, owner's €300 – €380 and the note | Pass |
+| N3 | WhatsApp message in Greeklish, owner does not answer | Name taken from the WhatsApp contact, time from the message, holding message, owner FYI to call | Pass |
+| N4 | WhatsApp "hi" from the owner's own number | Dropped before the AI step | Pass |
+| N5 | Follow-up, web form lead, no reminder yet | First reminder by email, next one in 3 days | Pass |
+| N6 | Follow-up, web form lead, one reminder sent | Last reminder, next check in 1 day | Pass |
+| N7 | Follow-up, WhatsApp lead, one reminder sent | Marked lost, no message | Pass |
+| N8 | Booking link with the right token, then a wrong one | First accepted, second rejected with a reason | Pass |
+| N9 | Setup with an empty settings table | Default settings saved, 12 sample jobs split into rows | Pass |
+
+**Not covered:** the owner choosing "I will call" or "Decline" (same structure as N2 and N3), real Claude, real WhatsApp and real Gmail.
+
 # Testing: v0.1.0
 
 **How:** the six workflow files in this repo were imported into a local n8n **2.47.7** and published. Claude, WhatsApp (Meta Graph API) and email (SMTP) were replaced by local stand-ins that record every request. Real customer traffic was sent through the real triggers: form submissions, signed WhatsApp webhook events and webhook calls. Date: 15 November 2026.

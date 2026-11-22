@@ -7,7 +7,7 @@ About 45–60 minutes the first time, most of it creating accounts. Use a laptop
 |---|---|---|
 | n8n Cloud (or self-hosted n8n 2.x) | Runs the workflows | 14-day free trial |
 | Anthropic | Claude reads customer messages | Pay as you go (small amounts per message) |
-| Gmail (or any SMTP mailbox) | Email replies | Free |
+| Gmail account | Email replies | Free |
 | Meta for Developers | WhatsApp Cloud API: customer replies and owner alerts | Free test number |
 
 ## 1. Import the six workflows
@@ -34,8 +34,8 @@ Open each node listed below, click **Credential to connect with > Create new cre
 2. In n8n paste it into **API Key**. Leave Base URL as is.
 
 ### Email (nodes **Reply by email**, **Remind by email**)
-For Gmail: Google Account > **Security** > turn on **2-Step Verification** > **App passwords** > create one called n8n.
-In n8n create an **SMTP** credential: User = your Gmail address, Password = the app password, Host = `smtp.gmail.com`, Port = `465`, SSL/TLS = on.
+These are Gmail nodes. Open **Reply by email**, click **Credential to connect with > Create new credential**, then **Sign in with Google** and allow access. Pick the same credential in **Remind by email** (workflow 03).
+On self-hosted n8n you first need a Google OAuth client (see "Google OAuth2 single service" in the n8n docs). Emails are sent from the Gmail account you sign in with, so `from_email` in settings is no longer used.
 
 ### WhatsApp (trigger **WhatsApp message**, and every node that sends a WhatsApp message to customers or the owner)
 1. Go to developers.facebook.com > **My Apps > Create app** > choose the **Business** type > add the **WhatsApp** product.

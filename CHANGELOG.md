@@ -2,6 +2,16 @@
 
 All notable changes to Garage Quote Agent. Versions follow [docs/versioning.md](docs/versioning.md).
 
+## [0.2.0] - 2026-11-22
+
+### Changed
+- 9 of 11 Code nodes are replaced with n8n's own nodes (Filter, Split Out, Edit Fields, Merge, Switch). Each channel now has its own visible "Lead from ..." step, and the owner's four possible answers are a Switch with one step each. Decision 0008 explains why two stay in Code: the pricing rules (workflow 01) and the weekly numbers (workflow 04).
+- Email replies and reminders use n8n's Gmail node instead of SMTP, so setup is "Sign in with Google" instead of an app password.
+- `package.json` said owner approval happens on Telegram. It happens on WhatsApp since 0.1.0. Fixed.
+
+### Upgrade
+- Re-import workflows 00 to 03, then connect a Gmail credential (setup guide, step 3). Data tables do not change.
+
 ## [0.1.1] - 2026-11-16
 
 ### Changed
